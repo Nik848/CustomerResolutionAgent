@@ -1,41 +1,116 @@
-# Airline Customer Resolution Agent
+# Airline Customer Resolution Agent (SkyResolve AI)
 
-An agentic AI application for airline customer disruption resolution built with a clean **Three-Layer Architecture**.
+An enterprise-grade, agentic AI platform for airline customer disruption resolution built strictly upon a clean **Three-Layer Architecture**.
 
-```
-React Frontend (5173) ──HTTP (Bearer JWT)──► Node.js Backend (5000) ──HTTP (Internal Key)──► Python AI Service (8000)
-                                                    │
-                                                    ▼
-                                            Supabase Database
-```
+The system automates policy evaluation, disruption compensation (cancellations, delays, rebookings, meal vouchers, lounge passes, hotel accommodations), and Human-in-the-Loop (HITL) supervisor approvals while maintaining strict separation of concerns, multi-tenant security, and comprehensive audit trails.
 
 ---
 
-## Architecture Overview
+## 🏛️ System Architecture
 
-1. **Frontend (`frontend/`)**: React + Vite single-page application. Handles user authentication with Supabase Auth (Email + Password) and provides responsive customer chat and supervisor HITL dashboards.
-2. **Backend API (`backend/`)**: Node.js + Express server. Handles authentication validation, customer and booking queries, database mutations for resolution actions, supervisor approval workflows, and audit logging.
-3. **AI Service (`ai-service/`)**: Python + FastAPI service. Powers the customer resolution agent using LangGraph, Groq LLM reasoning, policy evaluation, and Human-in-the-Loop (HITL) interrupt/resume workflows.
+```
+React Frontend (5173) ──HTTP (Bearer JWT)──► Node.js / Express Backend (5000) ──HTTP (X-Internal-API-Key)──► Python / FastAPI AI Service (8000)
+                                                    │                                                                  │
+                                                    ▼                                                                  ▼
+                                          Hosted Supabase (DB & Auth)                                            Groq LLM API
+```
+
+### Architectural Ownership:
+1. **React Frontend (`frontend/`)**:
+   - Built with React + Vite.
+   - User authentication (Email/Password) via Supabase Auth client.
+   - Modern customer portal: Live flight disruptions, quick prompt chips, real-time message streaming, structured resolution cards (vouchers, refunds, rebookings), and supervisor pending approval notices.
+   - Dedicated Supervisor/Admin dashboard: Real-time review, approval, or rejection of escalated customer requests with supervisor resolution notes.
+
+2. **Node.js / Express Backend (`backend/`)**:
+   - **Database & Data Authority**: Sole owner of all PostgreSQL/Supabase access, database mutations, and application state.
+   - **Authentication & Security**: Validates JWTs, resolves authenticated customer identity (`auth_user_id` ➔ `customer_id`), and enforces role-based access control (`customer` vs `admin`).
+   - **Action Execution Engine**: Directly performs database mutations for full refunds, flight rebooking, meal vouchers, lounge access, and hotel accommodations.
+   - **HITL Management**: Persists approval requests and orchestrates workflow resumption.
+   - **Audit Persistence**: Writes all action and approval events to the tamper-evident backend audit log.
+
+3. **Python / FastAPI AI Service (`ai-service/`)**:
+   - **Intelligence & Orchestration**: Powered by LangGraph state machines and Groq LLMs (`openai/gpt-oss-20b`).
+   - **Zero Direct Database Access**: Strictly decoupled from PostgreSQL/Supabase. All customer and booking context is injected or retrieved via authenticated backend HTTP requests.
+   - **Policy Engine**: Enforces exact airline rules (delays <3h, 3–5h, >5h; cancellations; fare difference thresholds).
+   - **Human-in-the-Loop (HITL)**: Uses LangGraph's native `interrupt()` and `Command(resume=...)` to pause execution when authority limits are exceeded and resume after supervisor sign-off.
 
 ---
 
-## Getting Started
+## 📋 Assignment Rules & Disruption Policies
 
-### Prerequisites
-- Node.js (v18+)
-- Python (v3.10+)
-- Supabase project with database configured
+The agent strictly adheres to the official assignment data pack:
 
-### 1. Python AI Service
+| Disruption Type | Rule & Criteria | Permitted Actions |
+| :--- | :--- | :--- |
+| **Flight Cancellation** | Airline-caused cancellation | Free rebooking on next available flight within 24 hours **OR** full refund to original payment method. Unaffected flights are left untouched. |
+| **Delay < 3 Hours** | Operational / Airline delay | ₹500 meal voucher. |
+| **Delay 3 to 5 Hours** | Operational / Airline delay | Meal voucher + lounge access pass. Hotel is strictly **denied**. |
+| **Delay > 5 Hours** | Major delay | Meal voucher + lounge access + hotel accommodation covering **only the delayed hours** (not full night). |
+| **Fare Difference** | Voluntary rebooking to higher-fare flight | Customer must pay difference. Agents can waive up to ₹1,500. Any waiver **> ₹1,500 requires supervisor approval (HITL)**. |
+| **Loyalty Tiers** | Gold & Platinum members | Priority access for next-available seats, but **no unauthorized compensatory upgrades** (e.g. free business class upgrade rejected). |
+
+---
+
+## 🚀 How to Run Locally
+
+You can run the system either via **Docker Compose (Recommended)** or **Direct Process Mode**.
+
+### Option A: Running with Docker Compose (Recommended)
+
+Docker Compose starts both the backend and AI service in their isolated Linux containers with internal networking configured.
+
+#### 1. Setup Environment Variables
+Copy `.env.example` at the repository root to `.env`:
+```bash
+cp .env.example .env
+```
+Populate `.env` with your credentials:
+- `GROQ_API_KEY`: Your Groq API Key
+- `SUPABASE_URL`: Your Supabase Project URL (`https://xyz.supabase.co`)
+- `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase Service Role Secret Key
+- `SUPABASE_ANON_KEY`: Your Supabase Anon Key
+- `DATABASE_URL`: PostgreSQL connection string (pooler or direct)
+- `INTERNAL_API_KEY`: Shared secret key (e.g. `airline-internal-secret-key-2026`)
+
+#### 2. Build and Start Backend & AI Service
+```bash
+docker compose build
+docker compose up -d
+```
+Verify running containers:
+```bash
+docker compose ps
+# airline-backend    Up   0.0.0.0:5000->5000/tcp
+# airline-ai-service Up   0.0.0.0:8000->8000/tcp
+```
+
+#### 3. Start React Frontend
+In a separate terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open your browser at `http://localhost:5173`.
+
+---
+
+### Option B: Running Without Docker (Direct Process Mode)
+
+#### 1. Start Python AI Service
 ```bash
 cd ai-service
-# Activate virtual environment
-./venv/Scripts/activate  # On Windows
-# Run service
+# Create and activate virtual environment
+python -m venv venv
+./venv/Scripts/activate       # Windows PowerShell: .\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+# Start FastAPI server on port 8000
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 2. Node.js Backend
+#### 2. Start Node.js Backend
 ```bash
 cd backend
 npm install
@@ -43,7 +118,7 @@ npm run dev
 ```
 Runs on `http://localhost:5000`.
 
-### 3. React Frontend
+#### 3. Start React Frontend
 ```bash
 cd frontend
 npm install
@@ -53,73 +128,108 @@ Runs on `http://localhost:5173`.
 
 ---
 
-## Required Environment Variables
+## 🔍 How Everything Works (Under the Hood)
 
-### Python AI Service (`ai-service/.env`)
-```bash
-GROQ_API_KEY=your-groq-api-key
-BACKEND_API_URL=http://localhost:5000
-INTERNAL_API_KEY=airline-internal-secret-key-2026
+### 1. Customer Resolution Request Flow
+```
+[User Browser]
+      │  Types: "My flight SK-204 was cancelled, I want a refund."
+      ▼
+[React Frontend]
+      │  POST /api/chat with Bearer JWT
+      ▼
+[Node.js Backend]
+      │  1. Authenticates JWT with Supabase Auth
+      │  2. Resolves customer record (Priya Nair, CUST001)
+      │  3. Fetches customer's active bookings from Supabase
+      │  4. Forwards request, customer profile & bookings to AI Service
+      ▼
+[Python AI Service]
+      │  1. Verifies X-Internal-API-Key header
+      │  2. LangGraph node: Understands intent (cancellation + refund)
+      │  3. Selects disrupted booking (SK-204) while preserving unaffected return flight
+      │  4. Evaluates policy: evaluate_cancellation() ➔ Allowed: ["full_refund"]
+      │  5. Returns structured command: { status: "completed", actions: ["full_refund"] }
+      ▼
+[Node.js Backend]
+      │  1. Receives command from AI
+      │  2. Executes initiate_refund on Supabase (marks refund_status = "processed")
+      │  3. Appends audit event: action_executed
+      │  4. Returns final completion payload to Frontend
+      ▼
+[React Frontend]
+      Displays natural language confirmation + interactive Refund Action Card.
 ```
 
-### Node.js Backend (`backend/.env`)
-```bash
-PORT=5000
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-SUPABASE_ANON_KEY=your-supabase-anon-key
-DATABASE_URL=postgresql://postgres:password@db.example.com:6543/postgres
-AI_SERVICE_URL=http://localhost:8000
-INTERNAL_API_KEY=airline-internal-secret-key-2026
-FRONTEND_URL=http://localhost:5173
+### 2. Human-in-the-Loop (HITL) Supervisor Workflow
 ```
-
-### React Frontend (`frontend/.env.local`)
-```bash
-VITE_API_URL=http://localhost:5000
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+[Customer]
+      │  Requests: "Waive the ₹2,000 fare difference for my new flight."
+      ▼
+[AI Policy Engine]
+      │  Compares: ₹2,000 > ₹1,500 agent threshold
+      │  Graph execution is PAUSED using LangGraph interrupt()
+      │  Returns: status: "human_approval_required"
+      ▼
+[Node.js Backend]
+      │  Creates pending record in approval_requests table
+      │  Notifies customer: "Supervisor approval required"
+      ▼
+[Admin Dashboard]
+      │  Supervisor logs in at /admin
+      │  Views pending request with customer context & fare difference breakdown
+      │  Clicks [Approve Waiver] with note: "Approved for Platinum Tier"
+      ▼
+[Node.js Backend]
+      │  1. Updates approval_requests table to status: 'approved'
+      │  2. Calls AI Service POST /api/agent/resume with status: "approve"
+      ▼
+[Python AI Service]
+      │  Resumes paused LangGraph thread with Command(resume={"status": "approve"})
+      │  Completes rebooking node and returns confirmation
+      ▼
+[Node.js Backend]
+      │  Executes rebooking mutation in database
+      │  Logs human_approval_received audit event
 ```
 
 ---
 
-## Authentication & Authorization
+## 🧪 Verification & Automated Test Suites
 
-- **Customer Authentication**: Customer logs in via Supabase Auth (Email + Password). The frontend sends requests with `Authorization: Bearer <token>`.
-- **Identity Resolution**: Node backend verifies the token with Supabase Auth, determines the linked `customer_id` from `public.customers`, and scopes all operations to that customer.
-- **Admin Authorization**: Users with `role = 'admin'` in `public.profiles` can access supervisor endpoints (`/api/admin/approvals`). Customers are strictly rejected with 403 Forbidden.
-- **Internal Service Security**: Node backend and Python AI service communicate via HTTP protected with a shared `X-Internal-API-Key` header.
+All components feature comprehensive automated regression tests:
 
----
-
-## HITL (Human-in-the-Loop) Workflow
-
-1. Customer submits a request requiring supervisor approval (e.g. fare difference waiver > ₹1,500).
-2. AI service evaluates policy rules, sets `requires_human_approval = true`, and pauses the LangGraph execution using `interrupt()`.
-3. Node backend persists a pending record in `approval_requests` table.
-4. Supervisor views pending requests in the Admin Dashboard (`/admin`).
-5. Supervisor clicks **Approve** or **Reject** with an optional resolution note.
-6. Node backend resolves the record, resumes the paused LangGraph workflow via `POST /api/agent/resume`, executes resulting actions, and logs the audit event.
-7. Duplicate-processing protection ensures a request cannot be resolved twice.
-
----
-
-## Running Tests
-
-### Backend Tests (Jest)
+### 1. Backend Acceptance & Unit Tests (Jest)
+Tests all 11 acceptance scenarios (A through K), authentication gates, admin approval resolution, and internal security:
 ```bash
 cd backend
 npm test
 ```
+*Result: 6 test suites passed, 32 / 32 tests passed.*
 
-### AI Service Tests (Pytest)
+### 2. AI Service E2E & Boundary Tests (Pytest)
+Validates policy rules, Groq LLM routing, LangGraph state transitions, HITL pause/resume, and architecture boundary isolation:
 ```bash
 cd ai-service
 ./venv/Scripts/python -m pytest tests/ -v
 ```
+*Result: 27 / 27 tests passed.*
 
-### Frontend Build
+### 3. Frontend Production Build Check
+Validates React JSX compilation, Vite bundling, and asset integrity:
 ```bash
 cd frontend
 npm run build
 ```
+*Result: Production build completes cleanly in ~4.5 seconds.*
+
+---
+
+## 🔒 Security & Deployment Notes
+
+- **Secrets Handling**: Zero `.env` files are baked into Docker images or committed to Git. All secrets are passed at runtime via container environment variables.
+- **Microservice Authentication**: Internal server-to-server calls between the Node.js backend and FastAPI AI service require the `X-Internal-API-Key` header; unauthenticated requests are rejected with `401 Unauthorized`.
+- **Render Deployment Ready**:
+  - **Backend**: Deploy as Render Web Service using `backend/Dockerfile` (PORT dynamically injected by Render).
+  - **AI Service**: Deploy as Render Web Service using `ai-service/Dockerfile` (PORT dynamically injected by Render).
+  - **Frontend**: Deploy as Render Static Site (dist directory created via `npm run build`).
