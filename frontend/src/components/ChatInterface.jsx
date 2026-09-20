@@ -58,12 +58,21 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
       {/* Top Header */}
       <div className="chat-panel-header">
         <div className="agent-identity">
-          <div className="agent-avatar">🤖</div>
+          <div className="agent-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+              <rect x="4" y="8" width="16" height="12" rx="2"/>
+              <path d="M2 14h2"/>
+              <path d="M20 14h2"/>
+              <path d="M9 13v2"/>
+              <path d="M15 13v2"/>
+            </svg>
+          </div>
           <div>
-            <div className="agent-title">SkyResolve AI Assistant</div>
+            <div className="agent-title">SkyResolve Resolution Agent</div>
             <div className="agent-status-text">
               <span className="status-dot"></span>
-              Autonomous Agent Active · LangGraph Engine
+              Autonomous Agent Active · LangGraph Policy Engine
             </div>
           </div>
         </div>
@@ -73,10 +82,14 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
       <div className="chat-messages-area">
         {messages.length === 0 ? (
           <div className="chat-empty-state">
-            <div className="chat-empty-icon">✈️</div>
-            <h3 className="chat-empty-title">How can I resolve your disruption today?</h3>
+            <div className="chat-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+              </svg>
+            </div>
+            <h3 className="chat-empty-title">Customer Resolution Assistant</h3>
             <p className="chat-empty-desc">
-              I can instantly check policy eligibility, process full refunds, rebook flights, and issue meal vouchers or lounge access.
+              Check policy entitlement, submit disruption requests, process refunds, rebook flights, or request supervisor approval.
             </p>
 
             <div className="prompt-chips-container">
@@ -104,7 +117,9 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
               {msg.type === 'approval_decision' && (
                 <div className="action-card success">
                   <div className="action-card-header">
-                    <span className="action-card-icon">✓</span>
+                    <span className="action-card-icon">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
                     <span className="action-card-title">Supervisor Resolution</span>
                   </div>
                   <p className="action-card-body">{msg.content}</p>
@@ -114,7 +129,9 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
               {msg.type === 'error' && (
                 <div className="action-card rejected">
                   <div className="action-card-header">
-                    <span className="action-card-icon">⚠</span>
+                    <span className="action-card-icon">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </span>
                     <span className="action-card-title">Resolution Notice</span>
                   </div>
                   <p className="action-card-body">{msg.content}</p>
@@ -169,7 +186,8 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
       <div className="chat-input-area">
         {error && (
           <div className="auth-error-banner" style={{ marginBottom: '12px' }}>
-            <span>⚠️</span> {error}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span>{error}</span>
           </div>
         )}
 

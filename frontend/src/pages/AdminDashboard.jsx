@@ -336,8 +336,8 @@ export function AdminDashboard() {
     return (
       <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', color: '#6b7280' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
-          <div style={{ fontSize: '16px' }}>Loading Admin Dashboard...</div>
+          <div className="status-dot" style={{ width: '12px', height: '12px', margin: '0 auto 16px' }} />
+          <div style={{ fontSize: '15px', fontWeight: '500' }}>Loading Supervisor Dashboard...</div>
         </div>
       </div>
     )
@@ -347,7 +347,9 @@ export function AdminDashboard() {
     return (
       <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '24px', maxWidth: '480px', textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
+          <div style={{ marginBottom: '12px', color: '#dc2626' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
           <div style={{ fontWeight: '600', color: '#991b1b', marginBottom: '8px' }}>Access Error</div>
           <div style={{ color: '#b91c1c', fontSize: '14px', marginBottom: '16px' }}>{error}</div>
           <button onClick={signOut} style={{ padding: '8px 20px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}>
@@ -409,7 +411,8 @@ export function AdminDashboard() {
                 color: '#374151', display: 'flex', alignItems: 'center', gap: '6px'
               }}
             >
-              ↻ Refresh
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+              Refresh
             </button>
           </div>
         </div>
@@ -441,8 +444,10 @@ export function AdminDashboard() {
         <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           {(activeTab === 'pending' ? pending : history).length === 0 ? (
             <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>{activeTab === 'pending' ? '✅' : '📋'}</div>
-              <div style={{ fontSize: '16px', fontWeight: '500' }}>
+              <div style={{ marginBottom: '12px', color: '#cbd5e1' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                 {activeTab === 'pending' ? 'No pending approvals' : 'No resolved requests yet'}
               </div>
             </div>
