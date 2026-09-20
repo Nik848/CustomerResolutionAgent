@@ -142,11 +142,13 @@ async function arrangeHotel(bookingId, customerId) {
  */
 async function executeAction(actionName, bookingId, customerId) {
   switch (actionName) {
-    case 'full_refund':        return initiateRefund(bookingId, customerId);
+    case 'full_refund':            return initiateRefund(bookingId, customerId);
     case 'rebook_within_24_hours': return rebookFlight(bookingId, customerId);
-    case 'meal_voucher':       return issueMealVoucher(bookingId, customerId);
-    case 'lounge_access':      return grantLoungeAccess(bookingId, customerId);
-    case 'hotel_delayed_hours': return arrangeHotel(bookingId, customerId);
+    case 'meal_voucher':           return issueMealVoucher(bookingId, customerId);
+    case 'lounge_access':          return grantLoungeAccess(bookingId, customerId);
+    case 'hotel_delayed_hours':
+    case 'hotel_accommodation':    return arrangeHotel(bookingId, customerId);
+    case 'fare_difference_waiver': return { success: true, action: 'fare_difference_waiver', booking_id: bookingId, customer_id: customerId, message: 'Fare difference waiver confirmed.' };
     default:
       return { success: false, action: actionName, message: `Unknown action: ${actionName}` };
   }

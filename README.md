@@ -53,6 +53,57 @@ Runs on `http://localhost:5173`.
 
 ---
 
+## Required Environment Variables
+
+### Python AI Service (`ai-service/.env`)
+```bash
+GROQ_API_KEY=your-groq-api-key
+BACKEND_API_URL=http://localhost:5000
+INTERNAL_API_KEY=airline-internal-secret-key-2026
+```
+
+### Node.js Backend (`backend/.env`)
+```bash
+PORT=5000
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
+DATABASE_URL=postgresql://postgres:password@db.example.com:6543/postgres
+AI_SERVICE_URL=http://localhost:8000
+INTERNAL_API_KEY=airline-internal-secret-key-2026
+FRONTEND_URL=http://localhost:5173
+```
+
+### React Frontend (`frontend/.env.local`)
+```bash
+VITE_API_URL=http://localhost:5000
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
+
+---
+
+## Authentication & Authorization
+
+- **Customer Authentication**: Customer logs in via Supabase Auth (Email + Password). The frontend sends requests with `Authorization: Bearer <token>`.
+- **Identity Resolution**: Node backend verifies the token with Supabase Auth, determines the linked `customer_id` from `public.customers`, and scopes all operations to that customer.
+- **Admin Authorization**: Users with `role = 'admin'` in `public.profiles` can access supervisor endpoints (`/api/admin/approvals`). Customers are strictly rejected with 403 Forbidden.
+- **Internal Service Security**: Node backend and Python AI service communicate via HTTP protected with a shared `X-Internal-API-Key` header.
+
+---
+
+## HITL (Human-in-the-Loop) Workflow
+
+1. Customer submits a request requiring supervisor approval (e.g. fare difference waiver > ₹1,500).
+2. AI service evaluates policy rules, sets `requires_human_approval = true`, and pauses the LangGraph execution using `interrupt()`.
+3. Node backend persists a pending record in `approval_requests` table.
+4. Supervisor views pending requests in the Admin Dashboard (`/admin`).
+5. Supervisor clicks **Approve** or **Reject** with an optional resolution note.
+6. Node backend resolves the record, resumes the paused LangGraph workflow via `POST /api/agent/resume`, executes resulting actions, and logs the audit event.
+7. Duplicate-processing protection ensures a request cannot be resolved twice.
+
+---
+
 ## Running Tests
 
 ### Backend Tests (Jest)
