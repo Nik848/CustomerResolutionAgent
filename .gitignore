@@ -30,8 +30,11 @@ chroma/
 *.sqlite
 *.sqlite3
 
-# Logs
+# Logs & Runtime Audit Data
 *.log
+data/audit/
+ai-service/data/audit/
+
 
 # IDEs and Editors
 .idea/
