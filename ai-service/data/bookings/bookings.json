@@ -1,7 +1,8 @@
 [
   {
+    "booking_id": "BOOK001",
+    "customer_id": "CUST001",
     "pnr": "SK4821X",
-    "customer_name": "Priya Nair",
     "flight_number": "SK-204",
     "origin": "Delhi",
     "destination": "Goa",
@@ -12,8 +13,9 @@
     "disruption_reason": "operational"
   },
   {
+    "booking_id": "BOOK002",
+    "customer_id": "CUST001",
     "pnr": "SK4821X",
-    "customer_name": "Priya Nair",
     "flight_number": "RETURN",
     "origin": "Goa",
     "destination": "Delhi",
@@ -24,8 +26,9 @@
     "disruption_reason": null
   },
   {
+    "booking_id": "BOOK003",
+    "customer_id": "CUST002",
     "pnr": "TR1190B",
-    "customer_name": "Arvind Kulkarni",
     "flight_number": "SK-118",
     "origin": "Mumbai",
     "destination": "Bengaluru",
@@ -37,8 +40,9 @@
     "disruption_reason": null
   },
   {
+    "booking_id": "BOOK004",
+    "customer_id": "CUST003",
     "pnr": "WL7742",
-    "customer_name": "Meher Kaur",
     "flight_number": "SK-305",
     "origin": "Delhi",
     "destination": "Hyderabad",

@@ -12,11 +12,11 @@ def load_bookings():
         return json.load(file)
 
 
-def get_bookings_by_pnr(pnr: str):
+def get_bookings_by_customer_id(customer_id: str):
     bookings = load_bookings()
 
     return [
         booking
         for booking in bookings
-        if booking["pnr"].upper() == pnr.upper()
+        if booking["customer_id"].upper() == customer_id.upper()
     ]

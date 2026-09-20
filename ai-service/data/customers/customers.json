@@ -1,8 +1,8 @@
 [
   {
+    "customer_id": "CUST001",
     "name": "Priya Nair",
     "loyalty_tier": "Gold",
-    "pnr": "SK4821X",
     "email": "priya.nair@example.com",
     "phone": "+91-98xxxxxxx1",
     "travel_history": {
@@ -12,9 +12,9 @@
     }
   },
   {
+    "customer_id": "CUST002",
     "name": "Arvind Kulkarni",
     "loyalty_tier": "Silver",
-    "pnr": "TR1190B",
     "email": "arvind.kulkarni@example.com",
     "phone": "+91-98xxxxxxx2",
     "travel_history": {
@@ -24,9 +24,9 @@
     }
   },
   {
+    "customer_id": "CUST003",
     "name": "Meher Kaur",
     "loyalty_tier": "Platinum",
-    "pnr": "WL7742",
     "email": "meher.kaur@example.com",
     "phone": "+91-98xxxxxxx3",
     "travel_history": {

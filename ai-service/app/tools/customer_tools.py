@@ -12,11 +12,11 @@ def load_customers():
         return json.load(file)
 
 
-def get_customer_by_pnr(pnr: str):
+def get_customer_by_id(customer_id: str):
     customers = load_customers()
 
     for customer in customers:
-        if customer["pnr"].upper() == pnr.upper():
+        if customer["customer_id"].upper() == customer_id.upper():
             return customer
 
     return None
