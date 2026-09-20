@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Union
 
 
 class AgentState(TypedDict, total=False):
@@ -17,13 +17,21 @@ class AgentState(TypedDict, total=False):
     # Retrieved from database
     customer: Optional[dict]
     bookings: list[dict]
+    selected_booking: Optional[dict]
     policies: list[dict]
 
-    # Decision
+    # Decision made by the policy engine
     decision: Optional[dict]
 
-    # Agent control
+    # What actually happened — a list when multiple actions ran,
+    # or a single dict for HITL-style outcomes
+    action_result: Optional[Union[dict, list]]
+
+    # Populated only when a supervisor had to weigh in
+    human_approval: Optional[dict]
+
+    # Controls which branch the graph should take next
     next_step: Optional[str]
 
-    # Audit
+    # Running list of audit events appended during execution
     audit_log: list[dict]

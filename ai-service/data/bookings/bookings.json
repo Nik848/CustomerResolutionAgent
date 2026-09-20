@@ -37,7 +37,11 @@
     "status": "delayed",
     "delay_hours": 4,
     "new_departure": "11:10",
-    "disruption_reason": null
+    "disruption_reason": null,
+    "meal_voucher_status": "issued",
+    "meal_voucher_issued_at": "2026-09-20T09:14:40.280805",
+    "lounge_access_status": "granted",
+    "lounge_access_granted_at": "2026-09-20T09:14:40.287842"
   },
   {
     "booking_id": "BOOK004",
@@ -51,6 +55,7 @@
     "status": "delayed",
     "delay_hours": 6,
     "new_departure": "20:00",
-    "disruption_reason": null
+    "disruption_reason": null,
+    "fare_difference": 2000
   }
 ]

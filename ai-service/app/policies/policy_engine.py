@@ -1,7 +1,9 @@
 def evaluate_delay(delay_hours: float):
+
     actions = []
 
     if delay_hours > 5:
+
         actions = [
             "meal_voucher",
             "lounge_access",
@@ -9,12 +11,14 @@ def evaluate_delay(delay_hours: float):
         ]
 
     elif delay_hours > 3:
+
         actions = [
             "meal_voucher",
             "lounge_access"
         ]
 
     elif delay_hours > 0:
+
         actions = [
             "meal_voucher"
         ]
@@ -26,6 +30,7 @@ def evaluate_delay(delay_hours: float):
 
 
 def evaluate_cancellation():
+
     return {
         "allowed": True,
         "actions": [
@@ -35,19 +40,33 @@ def evaluate_cancellation():
     }
 
 
-def evaluate_fare_difference(fare_difference: float):
+def evaluate_fare_difference(
+    fare_difference: float
+):
+
     if fare_difference > 1500:
+
         return {
-            "allowed": False,
-            "requires_human": True,
-            "reason": "Fare difference exceeds agent authority.",
+            "rebooking_allowed": True,
             "fare_difference": fare_difference,
+            "customer_must_pay": True,
+            "waiver_requires_human": True,
+            "reason": (
+                "Customer may proceed by paying the fare difference. "
+                "Waiving an amount above the agent authority threshold "
+                "requires supervisor approval."
+            ),
             "threshold": 1500
         }
 
     return {
-        "allowed": True,
-        "requires_human": False,
-        "reason": "Fare difference is within agent authority.",
-        "fare_difference": fare_difference
+        "rebooking_allowed": True,
+        "fare_difference": fare_difference,
+        "customer_must_pay": True,
+        "waiver_requires_human": False,
+        "reason": (
+            "Customer may proceed by paying the applicable "
+            "fare difference."
+        ),
+        "threshold": 1500
     }

@@ -1,0 +1,30 @@
+[
+  {
+    "timestamp": "2026-09-20T09:14:40.288798",
+    "event_type": "action_executed",
+    "customer_id": "CUST002",
+    "booking_id": "BOOK003",
+    "details": {
+      "actions": [
+        "meal_voucher",
+        "lounge_access"
+      ],
+      "results": [
+        {
+          "success": true,
+          "action": "issue_meal_voucher",
+          "booking_id": "BOOK003",
+          "customer_id": "CUST002",
+          "message": "Meal voucher has been successfully issued."
+        },
+        {
+          "success": true,
+          "action": "grant_lounge_access",
+          "booking_id": "BOOK003",
+          "customer_id": "CUST002",
+          "message": "Lounge access has been successfully granted."
+        }
+      ]
+    }
+  }
+]

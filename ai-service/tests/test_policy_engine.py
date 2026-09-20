@@ -31,4 +31,7 @@ def test_cancellation():
 def test_large_fare_difference():
     result = evaluate_fare_difference(2000)
 
-    assert result["requires_human"] is True
+    assert result["rebooking_allowed"] is True
+    assert result["customer_must_pay"] is True
+    assert result["waiver_requires_human"] is True
+    assert result["fare_difference"] == 2000
