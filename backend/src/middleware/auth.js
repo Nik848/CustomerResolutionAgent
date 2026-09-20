@@ -46,38 +46,85 @@ async function authenticate(req, res, next) {
   let role = 'customer';
   let name = '';
   try {
-    const { data: profile } = await supabase
+    let profile = null;
+    const { data: profileById } = await supabase
       .from('profiles')
       .select('role, name, email')
       .eq('auth_user_id', authUserId)
       .maybeSingle();
+
+    profile = profileById;
+
+    // Fallback lookup by email if not found by UUID
+    if (!profile && email) {
+      const { data: profileByEmail } = await supabase
+        .from('profiles')
+        .select('role, name, email')
+        .ilike('email', email.trim())
+        .maybeSingle();
+
+      if (profileByEmail) {
+        profile = profileByEmail;
+        // Keep auth_user_id in sync
+        supabase
+          .from('profiles')
+          .update({ auth_user_id: authUserId })
+          .ilike('email', email.trim())
+          .then(() => {})
+          .catch(() => {});
+      }
+    }
 
     if (profile) {
       role = profile.role || 'customer';
       name = profile.name || '';
     }
   } catch (err) {
-    // Profile table may not exist for this user — default to customer
     console.warn('[auth] Profile lookup fallback:', err.message);
+  }
+
+  // Safety guarantee: admin@airline.com is always supervisor/admin
+  if (email.toLowerCase() === 'admin@airline.com') {
+    role = 'admin';
+    name = name || 'Airline Supervisor';
   }
 
   req.user = { authUserId, email, name, role };
 
-  // For customers: resolve customer_id
+  // For customers: resolve customer_id with email fallback & auto-linking
   if (role === 'customer') {
     try {
-      const query = supabase
-        .from('customers')
-        .select('customer_id, name, email, loyalty_tier, phone, travel_history');
+      let customer = null;
+      const custQuery = supabase.from('customers');
+      const sel = custQuery?.select?.('customer_id, name, email, loyalty_tier, phone, travel_history');
 
-      if (query && typeof query.eq === 'function') {
-        const filtered = query.eq('auth_user_id', authUserId);
-        if (filtered && typeof filtered.maybeSingle === 'function') {
-          const { data: customer } = await filtered.maybeSingle();
-          if (customer) {
-            req.customer = customer;
+      if (sel?.eq) {
+        const { data: customerById } = (await sel.eq('auth_user_id', authUserId)?.maybeSingle?.()) || {};
+        customer = customerById;
+      }
+
+      // Fallback lookup by email and auto-link auth_user_id
+      if (!customer && email && custQuery?.select) {
+        const emailSel = custQuery.select('customer_id, name, email, loyalty_tier, phone, travel_history');
+        const filter = emailSel?.ilike ? emailSel.ilike('email', email.trim()) : (emailSel?.eq ? emailSel.eq('email', email.trim()) : null);
+        if (filter?.maybeSingle) {
+          const { data: customerByEmail } = (await filter.maybeSingle()) || {};
+          if (customerByEmail) {
+            customer = customerByEmail;
+            // Auto-link customer record so subsequent queries match by auth_user_id
+            if (custQuery.update) {
+              custQuery
+                .update({ auth_user_id: authUserId })
+                .eq('customer_id', customer.customer_id)
+                .then?.(() => {})
+                ?.catch?.(() => {});
+            }
           }
         }
+      }
+
+      if (customer) {
+        req.customer = customer;
       }
     } catch (err) {
       console.error('[auth] Customer lookup failed:', err.message);

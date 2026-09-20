@@ -25,6 +25,15 @@ export function Dashboard() {
 
         const customerData = await api.getMe()
         if (!active) return
+
+        // Admin accounts have no customer profile — they should not be here.
+        // This handles edge cases where role routing hasn't completed yet.
+        if (customerData.role === 'admin') {
+          // Just stop loading; App.jsx will re-evaluate and show AdminDashboard.
+          setLoading(false)
+          return
+        }
+
         setCustomer(customerData)
 
         const bookingsData = await api.getBookings()
@@ -34,8 +43,8 @@ export function Dashboard() {
       } catch (err) {
         if (!active) return
         if (
-          err.status === 403 ||
-          err.message?.toLowerCase().includes('no customer profile is linked')
+          err.message?.toLowerCase().includes('no customer profile is linked') ||
+          err.message?.toLowerCase().includes('not linked')
         ) {
           setUnlinkedError(true)
         } else {

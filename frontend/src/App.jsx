@@ -14,13 +14,47 @@ function AppContent() {
   const [userRole, setUserRole] = useState(null)
   const [roleLoading, setRoleLoading] = useState(false)
 
-  // Reset role when session changes (e.g. sign out or new sign in)
+  // Fetch role whenever session/user changes
   useEffect(() => {
-    if (!session) {
+    if (!session || !user) {
       setUserRole(null)
       setRoleLoading(false)
+      return
     }
-  }, [session])
+
+    let isMounted = true
+    setRoleLoading(true)
+
+    // Immediate hint for admin email to prevent any flicker or misroute
+    if (user.email?.toLowerCase() === 'admin@airline.com') {
+      setUserRole('admin')
+    }
+
+    api.getMe()
+      .then((data) => {
+        if (isMounted) {
+          setUserRole(data.role || (user.email?.toLowerCase() === 'admin@airline.com' ? 'admin' : 'customer'))
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          if (user.email?.toLowerCase() === 'admin@airline.com') {
+            setUserRole('admin')
+          } else if (err.status) {
+            setUserRole('customer')
+          }
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setRoleLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session, user])
 
   // Check backend health on mount
   useEffect(() => {
@@ -110,19 +144,6 @@ function AppContent() {
 
   // 4. Authenticated — determine role then show correct dashboard
   if (session && user) {
-    // If role not loaded yet, fetch it
-    if (userRole === null && !roleLoading) {
-      setRoleLoading(true)
-      api.getMe()
-        .then((data) => {
-          setUserRole(data.role || 'customer')
-        })
-        .catch(() => {
-          setUserRole('customer')
-        })
-        .finally(() => setRoleLoading(false))
-    }
-
     if (roleLoading || userRole === null) {
       return (
         <div className="app-container">

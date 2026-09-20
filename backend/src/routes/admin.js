@@ -11,7 +11,7 @@ const { supabase } = require('../db/supabase');
  * GET /api/admin/approvals
  * Returns pending + resolved approval history.
  */
-router.get('/', authenticate, requireAdmin, async (req, res) => {
+router.get('/approvals', authenticate, requireAdmin, async (req, res) => {
   const [pending, history] = await Promise.all([
     getPendingApprovals(),
     getApprovalHistory()
@@ -23,7 +23,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
  * GET /api/admin/approvals/:approvalId
  * Returns full details for a single approval.
  */
-router.get('/:approvalId', authenticate, requireAdmin, async (req, res) => {
+router.get('/approvals/:approvalId', authenticate, requireAdmin, async (req, res) => {
   try {
     const approval = await getApprovalById(req.params.approvalId);
     res.json(approval);
@@ -40,7 +40,7 @@ router.get('/:approvalId', authenticate, requireAdmin, async (req, res) => {
  * 2. Resume the paused LangGraph workflow in AI service
  * 3. Execute any resulting actions against Supabase
  */
-router.post('/:approvalId/approve', authenticate, requireAdmin, async (req, res) => {
+router.post('/approvals/:approvalId/approve', authenticate, requireAdmin, async (req, res) => {
   const { resolution_note } = req.body || {};
 
   let resolved;
@@ -120,7 +120,7 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, async (req, res)
  * POST /api/admin/approvals/:approvalId/reject
  * Supervisor rejects the request.
  */
-router.post('/:approvalId/reject', authenticate, requireAdmin, async (req, res) => {
+router.post('/approvals/:approvalId/reject', authenticate, requireAdmin, async (req, res) => {
   const { resolution_note } = req.body || {};
 
   let resolved;

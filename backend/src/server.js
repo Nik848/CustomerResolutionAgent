@@ -51,7 +51,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/me', meRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/chat', chatRouter);
-app.use('/api/admin/approvals', adminRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/internal', internalRoutes);
 
 // 404 handler

@@ -67,3 +67,30 @@ ON public.bookings
 FOR DELETE
 TO anon
 USING (true);
+
+
+-- Enable RLS on profiles table
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anon key to select profiles"
+ON public.profiles FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon key to insert profiles"
+ON public.profiles FOR INSERT TO anon WITH CHECK (true);
+
+CREATE POLICY "Allow anon key to update profiles"
+ON public.profiles FOR UPDATE TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow anon key to delete profiles"
+ON public.profiles FOR DELETE TO anon USING (true);
+
+
+-- Enable RLS on audit_events table
+ALTER TABLE public.audit_events ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anon key to select audit_events"
+ON public.audit_events FOR SELECT TO anon USING (true);
+
+CREATE POLICY "Allow anon key to insert audit_events"
+ON public.audit_events FOR INSERT TO anon WITH CHECK (true);
+
