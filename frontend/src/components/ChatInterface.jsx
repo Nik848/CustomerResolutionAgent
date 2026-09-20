@@ -40,7 +40,7 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
 
   const handleSendMessage = async (textToSend = null) => {
     const text = (textToSend || inputValue).trim()
-    if (!text || loading || resuming) return
+    if (!text || loading) return
 
     setInputValue('')
     await sendMessage(text)
@@ -181,14 +181,14 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyPress}
-            disabled={loading || resuming}
+            disabled={loading}
             rows={1}
           />
 
           <button
             className="chat-send-btn"
             onClick={() => handleSendMessage()}
-            disabled={!inputValue.trim() || loading || resuming}
+            disabled={!inputValue.trim() || loading}
             title="Send message"
           >
             <svg

@@ -9,7 +9,6 @@ export const useChat = (customerId) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [approval, setApproval] = useState(null) // holds the interrupt payload
-  const [resuming, setResuming] = useState(false)
 
   // Store thread ID per customer so conversations persist and don't bleed into each other
   useEffect(() => {
