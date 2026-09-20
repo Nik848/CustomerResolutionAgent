@@ -82,6 +82,18 @@ export const api = {
     return handleApiResponse(res)
   },
 
+  getApprovalStatus: async (threadId) => {
+    const headers = await getAuthHeaders()
+    const res = await fetchWithTimeout(
+      `${API_URL}/api/chat/approval-status/${encodeURIComponent(threadId)}`,
+      {
+        method: 'GET',
+        headers
+      }
+    )
+    return handleApiResponse(res)
+  },
+
   // ─── Admin Endpoints ──────────────────────────────────────────
   getAdminApprovals: async () => {
     const headers = await getAuthHeaders()

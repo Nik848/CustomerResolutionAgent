@@ -5,6 +5,7 @@ const { getPendingApprovals, getApprovalHistory, getApprovalById, resolveApprova
 const { executeAction } = require('../services/bookingService');
 const { resumeWorkflow } = require('../services/aiService');
 const { appendAuditEvent } = require('../utils/audit');
+const { supabase } = require('../db/supabase');
 
 /**
  * GET /api/admin/approvals
@@ -92,6 +93,19 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, async (req, res)
     }
   }
 
+  if (aiResult.response) {
+    try {
+      await supabase
+        .from('approval_requests')
+        .update({
+          details: { ...(resolved.details || {}), ai_response: aiResult.response }
+        })
+        .eq('id', req.params.approvalId);
+    } catch (err) {
+      console.error('[admin/approve] Failed to update approval details with ai_response:', err.message);
+    }
+  }
+
   res.json({
     status: 'completed',
     approval_id: req.params.approvalId,
@@ -136,6 +150,19 @@ router.post('/:approvalId/reject', authenticate, requireAdmin, async (req, res) 
     aiResult = await resumeWorkflow({ threadId: resolved.thread_id, decision: 'reject' });
   } catch (err) {
     console.error('[admin/reject] AI resume failed:', err.message);
+  }
+
+  if (aiResult.response) {
+    try {
+      await supabase
+        .from('approval_requests')
+        .update({
+          details: { ...(resolved.details || {}), ai_response: aiResult.response }
+        })
+        .eq('id', req.params.approvalId);
+    } catch (err) {
+      console.error('[admin/reject] Failed to update approval details with ai_response:', err.message);
+    }
   }
 
   res.json({

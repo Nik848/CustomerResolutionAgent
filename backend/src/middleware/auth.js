@@ -66,14 +66,18 @@ async function authenticate(req, res, next) {
   // For customers: resolve customer_id
   if (role === 'customer') {
     try {
-      const { data: customer } = await supabase
+      const query = supabase
         .from('customers')
-        .select('customer_id, name, email, loyalty_tier, phone, travel_history')
-        .eq('auth_user_id', authUserId)
-        .maybeSingle();
+        .select('customer_id, name, email, loyalty_tier, phone, travel_history');
 
-      if (customer) {
-        req.customer = customer;
+      if (query && typeof query.eq === 'function') {
+        const filtered = query.eq('auth_user_id', authUserId);
+        if (filtered && typeof filtered.maybeSingle === 'function') {
+          const { data: customer } = await filtered.maybeSingle();
+          if (customer) {
+            req.customer = customer;
+          }
+        }
       }
     } catch (err) {
       console.error('[auth] Customer lookup failed:', err.message);

@@ -4,14 +4,45 @@ import { formatTime } from '../utils/formatting'
 import { ActionCard } from './ActionCard'
 import { ApprovalPanel } from './ApprovalPanel'
 
-const QUICK_PROMPTS = [
-  'Can you rebook me?',
-  'I want a refund for my cancelled flight',
-  'Am I eligible for a meal voucher or lounge access?',
-  'Please waive the fare difference for my new booking'
-]
+function getContextualPrompts(bookings = []) {
+  const prompts = []
+  const hasCancelled = bookings.some(b => b.status === 'cancelled')
+  const hasDelayed = bookings.some(b => b.status === 'delayed')
+  const hasFareDiff = bookings.some(b => b.fare_difference && Number(b.fare_difference) > 0)
+  const isRebooked = bookings.some(b => b.rebooking_status === 'confirmed')
+  const hasLongDelay = bookings.some(b => b.status === 'delayed' && (b.delay_hours || 0) > 5)
 
-export function ChatInterface({ customerId, initialPrompt = '' }) {
+  if (hasCancelled) {
+    if (isRebooked) {
+      prompts.push('Check the details of my rebooked flight')
+    } else {
+      prompts.push('Can you rebook my cancelled flight?')
+      prompts.push('I want a refund for my cancelled flight')
+    }
+  }
+
+  if (hasDelayed) {
+    prompts.push('Am I eligible for a meal voucher or lounge access?')
+    if (hasLongDelay) {
+      prompts.push('Can you arrange hotel accommodations for my delayed flight?')
+    }
+  }
+
+  if (hasFareDiff) {
+    prompts.push('Please waive the fare difference for my booking')
+  }
+
+  if (prompts.length === 0) {
+    prompts.push('What is the status of my flight?')
+    prompts.push('What is your disruption compensation policy?')
+    prompts.push('Am I eligible for lounge access or meal vouchers?')
+  }
+
+  return prompts.slice(0, 4)
+}
+
+export function ChatInterface({ customerId, bookings = [], initialPrompt = '', onApprovalResolved, onActionCompleted }) {
+  const quickPrompts = getContextualPrompts(bookings)
   const {
     messages,
     loading,
@@ -19,7 +50,7 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
     approval,
     sendMessage,
     setError
-  } = useChat(customerId)
+  } = useChat(customerId, { onApprovalResolved, onActionCompleted })
 
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef(null)
@@ -93,7 +124,7 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
             </p>
 
             <div className="prompt-chips-container">
-              {QUICK_PROMPTS.map((prompt, idx) => (
+              {quickPrompts.map((prompt, idx) => (
                 <button
                   key={idx}
                   className="prompt-chip"
@@ -120,7 +151,7 @@ export function ChatInterface({ customerId, initialPrompt = '' }) {
                     <span className="action-card-icon">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </span>
-                    <span className="action-card-title">Supervisor Resolution</span>
+                    <span className="action-card-title">Approval Verified</span>
                   </div>
                   <p className="action-card-body">{msg.content}</p>
                 </div>

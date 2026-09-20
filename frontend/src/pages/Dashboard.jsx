@@ -17,7 +17,7 @@ export function Dashboard() {
   useEffect(() => {
     let active = true
 
-    const loadData = async () => {
+      const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
@@ -52,8 +52,30 @@ export function Dashboard() {
     }
   }, [])
 
+  // Refresh only bookings — called after approval is resolved or chat action completes
+  const refreshBookings = async () => {
+    try {
+      const bookingsData = await api.getBookings()
+      setBookings(bookingsData.bookings || [])
+    } catch {
+      // Silently ignore refresh errors
+    }
+  }
+
+  // Periodic polling to keep Active Itinerary synchronized with database updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshBookings()
+    }, 3500)
+    return () => clearInterval(interval)
+  }, [])
+
   const handleQuickAsk = (booking) => {
-    if (booking.status === 'cancelled') {
+    if (booking.rebooking_status === 'confirmed') {
+      setActivePrompt(`Can you provide the confirmation details of my rebooked flight for ${booking.flight_number}?`)
+    } else if (booking.refund_status === 'initiated') {
+      setActivePrompt(`What is the current status of my refund for flight ${booking.flight_number}?`)
+    } else if (booking.status === 'cancelled') {
       setActivePrompt(`My flight ${booking.flight_number} was cancelled. Can you rebook me or provide a refund?`)
     } else if (booking.status === 'delayed') {
       setActivePrompt(`My flight ${booking.flight_number} is delayed by ${booking.delay_hours || 4} hours. What compensation or meal voucher do I qualify for?`)
@@ -165,7 +187,7 @@ export function Dashboard() {
               <div className="stat-box">
                 <div className="stat-label">Past 12 Mo. Flights</div>
                 <div className="stat-value">
-                  {travelHistory.flights_last_12_months ?? 6}
+                  {travelHistory.flights_last_12_months !== undefined ? travelHistory.flights_last_12_months : '—'}
                 </div>
               </div>
             </div>
@@ -189,46 +211,142 @@ export function Dashboard() {
               </div>
             ) : (
               <div className="bookings-list">
-                {bookings.map((booking) => (
-                  <div
-                    key={booking.booking_id}
-                    className={`booking-card ${booking.status}`}
-                    onClick={() => handleQuickAsk(booking)}
-                  >
-                    <div className="booking-top-row">
-                      <div className="flight-number-tag">
-                        <span>{booking.flight_number}</span>
-                      </div>
-                      <span className={`status-pill ${booking.status}`}>
-                        {getStatusLabel(booking.status)}
-                        {booking.delay_hours > 0 && ` (${booking.delay_hours}h)`}
-                      </span>
-                    </div>
+                {bookings.map((booking) => {
+                  const isRebooked = booking.rebooking_status === 'confirmed'
+                  const isRefunded = booking.refund_status === 'initiated'
+                  const hasWaiver = booking.fare_difference_waiver_status === 'waived'
+                  const hasLounge = booking.lounge_access_status === 'granted'
+                  const hasHotel = booking.hotel_status === 'arranged'
+                  const hasMeal = booking.meal_voucher_status === 'issued'
 
-                    <div className="booking-route-row">
-                      <span className="route-city">{booking.origin}</span>
-                      <span className="route-arrow">→</span>
-                      <span className="route-city">{booking.destination}</span>
-                    </div>
-
-                    <div className="booking-details-row">
-                      <span>PNR: <strong style={{ color: '#0f172a' }}>{booking.pnr || 'SK4821X'}</strong></span>
-                      <span>Dep: {booking.scheduled_departure || '18:40'}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="action-trigger-btn"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleQuickAsk(booking)
-                      }}
+                  return (
+                    <div
+                      key={booking.booking_id}
+                      className={`booking-card ${isRebooked ? 'confirmed' : booking.status}`}
+                      onClick={() => handleQuickAsk(booking)}
                     >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                      Inquire About This Flight
-                    </button>
-                  </div>
-                ))}
+                      <div className="booking-top-row">
+                        <div className="flight-number-tag">
+                          <span>{booking.flight_number}</span>
+                          {isRebooked && (
+                            <span style={{
+                              fontSize: '11px',
+                              color: '#047857',
+                              background: '#d1fae5',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 700
+                            }}>
+                              Rebooked
+                            </span>
+                          )}
+                        </div>
+                        <span className={`status-pill ${isRebooked ? 'confirmed' : booking.status}`}>
+                          {isRebooked ? 'Rebooked' : getStatusLabel(booking.status)}
+                          {booking.delay_hours > 0 && !isRebooked && ` (${booking.delay_hours}h)`}
+                        </span>
+                      </div>
+
+                      <div className="booking-route-row">
+                        <span className="route-city">{booking.origin}</span>
+                        <span className="route-arrow">→</span>
+                        <span className="route-city">{booking.destination}</span>
+                      </div>
+
+                      <div className="booking-details-row">
+                        <span>PNR: <strong style={{ color: '#0f172a' }}>{booking.pnr || '—'}</strong></span>
+                        <span>Dep: {booking.new_departure || booking.scheduled_departure || '—'}</span>
+                      </div>
+
+                      {/* Resolution Badges */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                        {isRebooked && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#047857',
+                            background: '#ecfdf5', border: '1px solid #a7f3d0',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Rebooking Confirmed (Next Available Flight)</span>
+                          </div>
+                        )}
+
+                        {isRefunded && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#6d28d9',
+                            background: '#f5f3ff', border: '1px solid #ddd6fe',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>Full Refund Initiated</span>
+                          </div>
+                        )}
+
+                        {hasWaiver && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#16a34a',
+                            background: '#dcfce7', border: '1px solid #86efac',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Fare Difference Waived</span>
+                          </div>
+                        )}
+
+                        {hasLounge && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#0369a1',
+                            background: '#f0f9ff', border: '1px solid #bae6fd',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                            <span>Lounge Access Pass Issued</span>
+                          </div>
+                        )}
+
+                        {hasHotel && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#b45309',
+                            background: '#fffbeb', border: '1px solid #fde68a',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M6 18V4h12v14"/><path d="M10 8h4"/><path d="M10 12h4"/></svg>
+                            <span>Hotel Accommodation Arranged</span>
+                          </div>
+                        )}
+
+                        {hasMeal && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            fontSize: '12px', fontWeight: '600', color: '#0f766e',
+                            background: '#f0fdfa', border: '1px solid #99f6e4',
+                            borderRadius: '6px', padding: '4px 8px'
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+                            <span>Meal Voucher (₹1,500) Issued</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="action-trigger-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleQuickAsk(booking)
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: '6px' }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        {isRebooked ? 'Inquire About Rebooking' : isRefunded ? 'Check Refund Status' : 'Inquire About This Flight'}
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -237,7 +355,10 @@ export function Dashboard() {
         {/* Right Main Content: Chat Interface */}
         <ChatInterface
           customerId={customer?.customer_id}
+          bookings={bookings}
           initialPrompt={activePrompt}
+          onApprovalResolved={refreshBookings}
+          onActionCompleted={refreshBookings}
         />
       </div>
     </div>

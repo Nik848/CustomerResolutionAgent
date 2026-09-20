@@ -57,15 +57,36 @@ def agent_process(request: AgentProcessRequest):
         interrupt_data = result["__interrupt__"][0].value
         approval_req = interrupt_data.get("approval_request") or {}
 
+        selected_booking = result.get("selected_booking") or {}
+        delay_hours = selected_booking.get("delay_hours", 0)
+        flight_num = selected_booking.get("flight_number", "your flight")
+        customer_name = (request.customer or {}).get("name", "Customer")
+        fare_diff = (result.get("decision") or {}).get("fare_difference") or (selected_booking.get("fare_difference") or 0)
+
+        if delay_hours >= 5:
+            resp_msg = (
+                f"{customer_name}, regarding your {delay_hours}-hour delayed flight {flight_num}: "
+                f"Under airline policy DELAY-003, hotel coverage applies only for the {delay_hours} qualifying delayed hours rather than a full night automatically. "
+                f"Regarding your request to switch to a higher-fare flight and waive the ₹{fare_diff:,} fare difference: "
+                f"because this amount exceeds the autonomous agent authority threshold (₹1,500), the workflow has paused and "
+                f"submitted an approval request to a supervisor."
+            )
+        else:
+            resp_msg = (
+                f"{customer_name}, your request to waive the ₹{fare_diff:,} fare difference exceeds the autonomous agent "
+                f"authority threshold (₹1,500). The workflow has paused and submitted an approval request to a supervisor."
+            )
+
         return {
             "status": "human_approval_required",
             "requires_human_approval": True,
-            "response": "Your request requires supervisor approval. A supervisor has been notified.",
+            "response": resp_msg,
             "interrupt": interrupt_data,
             "approval_request": approval_req,
-            "intent": result.get("intent"),
+            "intent": result.get("intent") or "fare_difference_waiver",
             "decision": result.get("decision"),
             "booking_id": (result.get("selected_booking") or {}).get("booking_id"),
+            "selected_booking": result.get("selected_booking"),
             "thread_id": request.thread_id
         }
 

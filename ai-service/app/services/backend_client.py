@@ -55,6 +55,20 @@ def get_booking(booking_id: str, customer_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def get_booking_state(booking_id: str, customer_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieve full booking state including entity tables from Node backend."""
+    try:
+        with httpx.Client(base_url=BACKEND_API_URL, headers=_HEADERS, timeout=_TIMEOUT) as client:
+            resp = client.get(f"/api/internal/bookings/{booking_id}/state", params={"customer_id": customer_id})
+            if resp.status_code == 200:
+                return resp.json().get("booking_state")
+            return None
+    except Exception as e:
+        print(f"[backend_client] get_booking_state failed: {e}")
+        return None
+
+
+
 def execute_action(action: str, booking_id: str, customer_id: str) -> Dict[str, Any]:
     """Request Node backend to execute an action (refund, rebook, etc.)."""
     try:

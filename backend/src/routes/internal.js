@@ -47,6 +47,19 @@ router.get('/bookings/:bookingId', requireInternalKey, async (req, res) => {
 });
 
 /**
+ * GET /api/internal/bookings/:bookingId/state?customer_id=...
+ * Returns full state with entity statuses.
+ */
+router.get('/bookings/:bookingId/state', requireInternalKey, async (req, res) => {
+  const { customer_id } = req.query;
+  const { getBookingFullState } = require('../services/bookingService');
+  const fullState = await getBookingFullState(req.params.bookingId, customer_id);
+  if (!fullState) return res.status(404).json({ detail: 'Booking not found' });
+  res.json({ booking_state: fullState });
+});
+
+
+/**
  * POST /api/internal/actions
  * AI service requests an action be executed.
  * Backend validates and executes against Supabase — LLM cannot directly mutate DB.

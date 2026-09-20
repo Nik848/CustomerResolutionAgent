@@ -419,6 +419,30 @@ class TestCUST003FareDifferenceHITL:
         assert exec_events
         assert exec_events[0]["details"].get("status") == "rejected"
 
+    def test_meher_combined_delay_hotel_waiver_pauses_for_approval(self):
+        """
+        When Meher mentions both 6-hour delay hotel request and waiver of ₹2,000 fare difference,
+        the workflow must pause for supervisor approval rather than being bypassed.
+        """
+        graph = _build_graph()
+        tid = "test-cust003-combined-hitl"
+        with patch(
+            "app.graph.nodes.agent.understand_request",
+            return_value={"intent": "rebooking", "requested_action": "waive_fare_difference"},
+        ):
+            result = graph.invoke(
+                {
+                    "customer_id": "CUST003",
+                    "customer": MEHER,
+                    "bookings": MEHER_BOOKINGS,
+                    "user_message": "My flight is delayed by six hours. I want a hotel for the entire night, and I want to move to a higher-fare flight. Please waive the two-thousand-rupee fare difference.",
+                },
+                {"configurable": {"thread_id": tid}},
+            )
+
+        assert "__interrupt__" in result, "Graph must pause for supervisor approval on combined delay + waiver"
+
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Audit log integrity

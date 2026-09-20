@@ -131,6 +131,23 @@ def build_graph():
 
     checkpointer = MemorySaver()
 
-    return graph.compile(
+    compiled = graph.compile(
         checkpointer=checkpointer
     )
+
+    orig_invoke = compiled.invoke
+
+    def invoke_with_interrupts(input_data, config=None, **kwargs):
+        res = orig_invoke(input_data, config, **kwargs)
+        if config and isinstance(res, dict):
+            state = compiled.get_state(config)
+            if state.tasks:
+                interrupts = [
+                    i for t in state.tasks for i in getattr(t, "interrupts", [])
+                ]
+                if interrupts:
+                    res["__interrupt__"] = interrupts
+        return res
+
+    compiled.invoke = invoke_with_interrupts
+    return compiled

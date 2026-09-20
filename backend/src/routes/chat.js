@@ -6,6 +6,7 @@ const { executeAction } = require('../services/bookingService');
 const { createApprovalRequest } = require('../services/approvalService');
 const { processChat } = require('../services/aiService');
 const { appendAuditEvent } = require('../utils/audit');
+const { supabase } = require('../db/supabase');
 
 const handleChat = async (req, res) => {
   const customer = req.customer;
@@ -42,11 +43,12 @@ const handleChat = async (req, res) => {
   // Handle interrupt — supervisor approval needed
   if (aiResult.status === 'human_approval_required' || aiResult.requires_human_approval) {
     const approvalReq = aiResult.approval_request || {};
+    const targetBookingId = approvalReq.booking_id || aiResult.booking_id || aiResult.selected_booking?.booking_id;
 
     try {
       await createApprovalRequest({
         customerId,
-        bookingId: approvalReq.booking_id || aiResult.booking_id,
+        bookingId: targetBookingId,
         threadId,
         reqType: aiResult.intent || 'fare_difference_waiver',
         reason: approvalReq.reason || 'Waiver exceeds agent authority threshold.',
@@ -64,7 +66,15 @@ const handleChat = async (req, res) => {
 
     return res.json({
       status: 'human_approval_required',
-      response: 'Your request requires supervisor approval. A supervisor has been notified.',
+      response: aiResult.response || 'Your request requires supervisor approval. A supervisor has been notified.',
+      interrupt: aiResult.interrupt || {
+        type: 'fare_difference_waiver',
+        reason: approvalReq.reason || 'Waiver exceeds agent authority threshold.',
+        details: approvalReq.details || aiResult.decision || {},
+        message: aiResult.response,
+        approval_request: approvalReq
+      },
+      decision: aiResult.decision,
       thread_id: threadId
     });
   }
@@ -116,7 +126,46 @@ const handleChat = async (req, res) => {
 };
 
 router.post('/', authenticate, requireCustomer, handleChat);
- 
+
+router.get('/approval-status/:threadId', authenticate, requireCustomer, async (req, res) => {
+  const { threadId } = req.params;
+  const customerId = req.customer.customer_id;
+
+  try {
+    const { data, error } = await supabase
+      .from('approval_requests')
+      .select('*')
+      .eq('thread_id', threadId)
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ detail: error.message });
+    }
+
+    if (!data) {
+      return res.json({ status: 'none' });
+    }
+
+    const aiResponse = data.details?.ai_response || (data.status === 'approved'
+      ? `${req.customer.name || 'Customer'}, your supervisor approved the waiver of the fare difference. The fare difference will not be charged and your flight rebooking has been confirmed.`
+      : `${req.customer.name || 'Customer'}, your request to waive the fare difference was not approved by the supervisor.`);
+
+    return res.json({
+      id: data.id,
+      status: data.status,
+      booking_id: data.booking_id,
+      resolution_note: data.resolution_note,
+      response: aiResponse,
+      details: data.details
+    });
+  } catch (err) {
+    return res.status(500).json({ detail: err.message });
+  }
+});
+
 module.exports = {
   router,
   handleChat

@@ -44,7 +44,11 @@ def evaluate_fare_difference(
     fare_difference: float
 ):
 
+    if fare_difference is None:
+        fare_difference = 0.0
+
     if fare_difference > 1500:
+
 
         return {
             "rebooking_allowed": True,
