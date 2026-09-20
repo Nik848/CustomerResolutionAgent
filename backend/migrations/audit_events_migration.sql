@@ -24,24 +24,23 @@ CREATE INDEX IF NOT EXISTS idx_audit_events_event_type
 
 ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;
 
--- Admins can read all audit events
+-- Admins (profiles.role = 'admin') can read all audit events
 CREATE POLICY "Admins can read audit events"
   ON audit_events FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM admins
-      WHERE admins.auth_user_id = auth.uid()
+      SELECT 1 FROM profiles
+      WHERE profiles.auth_user_id = auth.uid()
+        AND profiles.role = 'admin'
     )
   );
 
--- Service role (backend) can insert events
--- (Service role bypasses RLS by default in Supabase — no explicit policy needed,
---  but we document it here for clarity)
--- INSERT is done with the service_role key, which bypasses RLS.
+-- INSERT is done via the service_role key which bypasses RLS —
+-- no explicit INSERT policy is needed.
 
 COMMENT ON TABLE audit_events IS
   'Immutable audit trail of all agent actions, approval requests, and supervisor decisions.';
 COMMENT ON COLUMN audit_events.event_type IS
-  'One of: action_executed, human_approval_requested, human_approval_received, approval_rejected';
+  'One of: action_executed, human_approval_requested, human_approval_received, approval_rejected, approval_created';
 COMMENT ON COLUMN audit_events.details IS
   'Arbitrary JSON payload specific to the event_type';
