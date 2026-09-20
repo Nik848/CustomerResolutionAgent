@@ -175,4 +175,35 @@ router.post('/:approvalId/reject', authenticate, requireAdmin, async (req, res) 
   });
 });
 
+/**
+ * GET /api/admin/audit-logs
+ * Returns audit events from Supabase, newest first.
+ * Optional query params:
+ *   - customer_id: filter to a specific customer
+ *   - event_type:  filter to a specific event type
+ *   - limit:       max rows returned (default 200, max 500)
+ */
+router.get('/audit-logs', authenticate, requireAdmin, async (req, res) => {
+  const { customer_id, event_type } = req.query;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 500);
+
+  let query = supabase
+    .from('audit_events')
+    .select('id, timestamp, event_type, customer_id, booking_id, details')
+    .order('timestamp', { ascending: false })
+    .limit(limit);
+
+  if (customer_id) query = query.eq('customer_id', customer_id);
+  if (event_type)  query = query.eq('event_type', event_type);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[admin/audit-logs] Supabase error:', error.message);
+    return res.status(500).json({ detail: 'Failed to fetch audit logs.' });
+  }
+
+  res.json({ events: data || [] });
+});
+
 module.exports = router;

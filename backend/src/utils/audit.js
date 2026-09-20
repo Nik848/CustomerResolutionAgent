@@ -1,37 +1,36 @@
-const fs = require('fs');
-const path = require('path');
-
-const AUDIT_DIR = path.join(__dirname, '..', '..', '..', 'data', 'audit');
-const AUDIT_FILE = path.join(AUDIT_DIR, 'backend_audit_log.json');
+const { supabase } = require('../db/supabase');
 
 /**
- * Append an audit event to the backend audit log file.
- * This mirrors the Python audit logger but runs on the Node backend.
+ * Append an audit event to the `audit_events` table in Supabase.
+ *
+ * Replaces the previous flat-file implementation (backend_audit_log.json).
+ * Uses the service-role client so it bypasses RLS and always succeeds
+ * regardless of the authenticated user's role.
+ *
+ * Audit failures are intentionally swallowed so they never break the main flow.
+ *
+ * @param {Object} opts
+ * @param {string} opts.event_type  - 'action_executed' | 'human_approval_requested' |
+ *                                    'human_approval_received' | 'approval_rejected'
+ * @param {string} [opts.customer_id]
+ * @param {string} [opts.booking_id]
+ * @param {Object} [opts.details]
  */
-function appendAuditEvent({ event_type, customer_id, booking_id, details }) {
+async function appendAuditEvent({ event_type, customer_id, booking_id, details }) {
   try {
-    if (!fs.existsSync(AUDIT_DIR)) {
-      fs.mkdirSync(AUDIT_DIR, { recursive: true });
-    }
-
-    let events = [];
-    if (fs.existsSync(AUDIT_FILE)) {
-      const raw = fs.readFileSync(AUDIT_FILE, 'utf8');
-      events = JSON.parse(raw);
-    }
-
-    events.push({
-      timestamp: new Date().toISOString(),
+    const { error } = await supabase.from('audit_events').insert({
       event_type,
       customer_id: customer_id || null,
-      booking_id: booking_id || null,
-      details: details || {}
+      booking_id:  booking_id  || null,
+      details:     details     || {}
     });
 
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(events, null, 2), 'utf8');
+    if (error) {
+      console.error('[audit] Supabase insert failed:', error.message);
+    }
   } catch (err) {
-    // Audit failures should never break the main flow
-    console.error('[audit] Failed to write audit event:', err.message);
+    // Audit failures must never break the main request flow
+    console.error('[audit] Unexpected error writing audit event:', err.message);
   }
 }
 

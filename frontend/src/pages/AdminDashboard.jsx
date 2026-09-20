@@ -18,36 +18,67 @@ function formatDate(iso) {
 
 function StatusBadge({ status }) {
   const colors = {
-    pending: { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
+    pending:  { bg: '#fef3c7', color: '#92400e', border: '#fde68a' },
     approved: { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
     rejected: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' }
   }
   const s = colors[status] || colors.pending
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '2px 10px',
-        borderRadius: '999px',
-        fontSize: '12px',
-        fontWeight: '700',
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase',
-        background: s.bg,
-        color: s.color,
-        border: `1px solid ${s.border}`
-      }}
-    >
+    <span style={{
+      display: 'inline-block', padding: '2px 10px', borderRadius: '999px',
+      fontSize: '12px', fontWeight: '700', letterSpacing: '0.05em',
+      textTransform: 'uppercase', background: s.bg, color: s.color, border: `1px solid ${s.border}`
+    }}>
       {status}
     </span>
   )
 }
 
+// ── Audit event type config ────────────────────────────────
+const EVENT_TYPES = [
+  { value: '',                           label: 'All Events' },
+  { value: 'action_executed',            label: 'Action Executed' },
+  { value: 'human_approval_requested',   label: 'Approval Requested' },
+  { value: 'human_approval_received',    label: 'Approval Received' },
+  { value: 'approval_rejected',          label: 'Approval Rejected' },
+  { value: 'approval_created',           label: 'Approval Created' },
+]
+
+function eventTypeMeta(eventType) {
+  switch (eventType) {
+    case 'action_executed':
+      return { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7', icon: '⚡', label: 'Action' }
+    case 'human_approval_requested':
+      return { bg: '#fef3c7', color: '#92400e', border: '#fde68a', icon: '⏳', label: 'Approval Request' }
+    case 'human_approval_received':
+      return { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd', icon: '✓', label: 'Approved' }
+    case 'approval_rejected':
+      return { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', icon: '✕', label: 'Rejected' }
+    case 'approval_created':
+      return { bg: '#ede9fe', color: '#5b21b6', border: '#c4b5fd', icon: '📋', label: 'Approval Created' }
+    default:
+      return { bg: '#f3f4f6', color: '#374151', border: '#e5e7eb', icon: '·', label: eventType }
+  }
+}
+
+function EventTypeBadge({ eventType }) {
+  const meta = eventTypeMeta(eventType)
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '4px',
+      padding: '2px 10px', borderRadius: '999px', fontSize: '11px',
+      fontWeight: '700', letterSpacing: '0.04em', background: meta.bg,
+      color: meta.color, border: `1px solid ${meta.border}`
+    }}>
+      {meta.icon} {meta.label}
+    </span>
+  )
+}
+
+// ── Approval Detail Modal ─────────────────────────────────
 function ApprovalDetailModal({ approval, onClose, onApprove, onReject, processing }) {
   const [note, setNote] = useState('')
-
   if (!approval) return null
-
   return (
     <div
       style={{
@@ -57,13 +88,11 @@ function ApprovalDetailModal({ approval, onClose, onApprove, onReject, processin
       }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div
-        style={{
-          background: '#fff', borderRadius: '12px', width: '100%',
-          maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.3)', padding: '32px'
-        }}
-      >
+      <div style={{
+        background: '#fff', borderRadius: '12px', width: '100%',
+        maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.3)', padding: '32px'
+      }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
@@ -76,10 +105,7 @@ function ApprovalDetailModal({ approval, onClose, onApprove, onReject, processin
           </div>
           <button
             onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '20px', color: '#9ca3af', lineHeight: 1
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#9ca3af', lineHeight: 1 }}
           >
             ✕
           </button>
@@ -96,9 +122,7 @@ function ApprovalDetailModal({ approval, onClose, onApprove, onReject, processin
             <p style={{ margin: '0 0 8px', fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer</p>
             <p style={{ margin: 0, fontWeight: '700', fontSize: '16px', color: '#111827' }}>{approval.customer_name || approval.customer_id}</p>
             <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>{approval.customer_id}</p>
-            {approval.customer_email && (
-              <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>{approval.customer_email}</p>
-            )}
+            {approval.customer_email && <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#6b7280' }}>{approval.customer_email}</p>}
             {approval.loyalty_tier && (
               <span style={{ display: 'inline-block', marginTop: '6px', padding: '1px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', background: '#dbeafe', color: '#1e40af' }}>
                 {approval.loyalty_tier} Tier
@@ -258,6 +282,264 @@ function ApprovalRow({ req, onSelect }) {
   )
 }
 
+// ── Audit Log Row ─────────────────────────────────────────
+function AuditRow({ event, expanded, onToggle }) {
+  const meta = eventTypeMeta(event.event_type)
+  const detailStr = JSON.stringify(event.details, null, 2)
+
+  return (
+    <>
+      <tr
+        onClick={onToggle}
+        style={{
+          cursor: 'pointer',
+          borderBottom: expanded ? 'none' : '1px solid #f3f4f6',
+          background: expanded ? '#fafbff' : 'transparent'
+        }}
+        onMouseEnter={(e) => { if (!expanded) e.currentTarget.style.background = '#f9fafb' }}
+        onMouseLeave={(e) => { if (!expanded) e.currentTarget.style.background = 'transparent' }}
+      >
+        <td style={{ padding: '12px 16px', fontSize: '12px', color: '#6b7280', whiteSpace: 'nowrap' }}>
+          {formatDate(event.timestamp)}
+        </td>
+        <td style={{ padding: '12px 16px' }}>
+          <EventTypeBadge eventType={event.event_type} />
+        </td>
+        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>
+          {event.customer_id || '—'}
+        </td>
+        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>
+          {event.booking_id || '—'}
+        </td>
+        <td style={{ padding: '12px 16px', fontSize: '12px', color: '#6b7280' }}>
+          {/* Show first key of details as a quick summary */}
+          {event.details && Object.keys(event.details).length > 0
+            ? Object.keys(event.details).slice(0, 2).join(', ')
+            : '—'}
+        </td>
+        <td style={{ padding: '12px 16px', textAlign: 'center', color: '#9ca3af', fontSize: '12px' }}>
+          {expanded ? '▲' : '▼'}
+        </td>
+      </tr>
+      {expanded && (
+        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e5e7eb' }}>
+          <td colSpan={6} style={{ padding: '0 16px 16px 16px' }}>
+            <pre style={{
+              margin: 0, padding: '12px 16px', borderRadius: '6px',
+              background: '#1e293b', color: '#e2e8f0', fontSize: '12px',
+              lineHeight: '1.6', overflowX: 'auto', whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word', fontFamily: "'JetBrains Mono', 'Fira Code', monospace"
+            }}>
+              {detailStr}
+            </pre>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+// ── Logs Panel ────────────────────────────────────────────
+function LogsPanel() {
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
+  const [filterEventType, setFilterEventType] = useState('')
+  const [filterCustomerId, setFilterCustomerId] = useState('')
+  const [customerInput, setCustomerInput] = useState('')
+
+  const loadLogs = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await api.getAuditLogs({
+        eventType: filterEventType || undefined,
+        customerId: filterCustomerId || undefined,
+        limit: 200
+      })
+      setEvents(res.events || [])
+    } catch (err) {
+      setError(err.message || 'Failed to load audit logs.')
+    } finally {
+      setLoading(false)
+    }
+  }, [filterEventType, filterCustomerId])
+
+  useEffect(() => { loadLogs() }, [loadLogs])
+
+  const handleCustomerFilter = () => {
+    setFilterCustomerId(customerInput.trim())
+  }
+
+  const handleClearFilters = () => {
+    setFilterEventType('')
+    setFilterCustomerId('')
+    setCustomerInput('')
+  }
+
+  // Count per event type for summary chips
+  const typeCounts = events.reduce((acc, e) => {
+    acc[e.event_type] = (acc[e.event_type] || 0) + 1
+    return acc
+  }, {})
+
+  return (
+    <div>
+      {/* Filter Bar */}
+      <div style={{
+        background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+        padding: '16px 20px', marginBottom: '16px',
+        display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'
+      }}>
+        <select
+          id="log-event-type-filter"
+          value={filterEventType}
+          onChange={(e) => setFilterEventType(e.target.value)}
+          style={{
+            padding: '7px 12px', borderRadius: '6px', border: '1px solid #d1d5db',
+            fontSize: '13px', color: '#374151', background: '#fff', cursor: 'pointer'
+          }}
+        >
+          {EVENT_TYPES.map(t => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            id="log-customer-filter"
+            type="text"
+            placeholder="Filter by customer ID..."
+            value={customerInput}
+            onChange={(e) => setCustomerInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCustomerFilter()}
+            style={{
+              padding: '7px 12px', borderRadius: '6px', border: '1px solid #d1d5db',
+              fontSize: '13px', color: '#374151', width: '200px'
+            }}
+          />
+          <button
+            onClick={handleCustomerFilter}
+            style={{
+              padding: '7px 14px', borderRadius: '6px', border: 'none',
+              background: '#1e40af', color: '#fff', fontSize: '13px',
+              fontWeight: '600', cursor: 'pointer'
+            }}
+          >
+            Filter
+          </button>
+        </div>
+
+        {(filterEventType || filterCustomerId) && (
+          <button
+            onClick={handleClearFilters}
+            style={{
+              padding: '7px 14px', borderRadius: '6px', border: '1px solid #e5e7eb',
+              background: '#f9fafb', color: '#6b7280', fontSize: '13px',
+              fontWeight: '600', cursor: 'pointer'
+            }}
+          >
+            ✕ Clear
+          </button>
+        )}
+
+        <button
+          onClick={loadLogs}
+          style={{
+            marginLeft: 'auto', padding: '7px 16px', background: '#f3f4f6',
+            border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer',
+            fontSize: '13px', fontWeight: '600', color: '#374151',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 21h5v-5"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      {/* Summary Chips */}
+      {Object.keys(typeCounts).length > 0 && (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          {Object.entries(typeCounts).map(([type, count]) => {
+            const meta = eventTypeMeta(type)
+            return (
+              <button
+                key={type}
+                onClick={() => setFilterEventType(filterEventType === type ? '' : type)}
+                style={{
+                  padding: '4px 12px', borderRadius: '999px', border: `1px solid ${meta.border}`,
+                  background: filterEventType === type ? meta.color : meta.bg,
+                  color: filterEventType === type ? '#fff' : meta.color,
+                  fontSize: '12px', fontWeight: '700', cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {meta.icon} {meta.label} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+        {loading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
+            <div style={{ fontSize: '14px', fontWeight: '500' }}>Loading audit logs…</div>
+          </div>
+        ) : error ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#dc2626', fontSize: '14px' }}>
+            ⚠ {error}
+          </div>
+        ) : events.length === 0 ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
+            <div style={{ marginBottom: '12px', fontSize: '32px' }}>📋</div>
+            <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>No audit events found</div>
+            <div style={{ fontSize: '13px', marginTop: '6px' }}>
+              {filterEventType || filterCustomerId ? 'Try clearing the filters.' : 'Events will appear here as the agent processes requests.'}
+            </div>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                {['Timestamp', 'Event Type', 'Customer', 'Booking', 'Summary', ''].map(col => (
+                  <th key={col} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {events.map(event => (
+                <AuditRow
+                  key={event.id}
+                  event={event}
+                  expanded={expandedId === event.id}
+                  onToggle={() => setExpandedId(expandedId === event.id ? null : event.id)}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {events.length > 0 && (
+        <p style={{ marginTop: '10px', fontSize: '12px', color: '#9ca3af', textAlign: 'right' }}>
+          Showing {events.length} events · Click any row to expand details
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ── Main Component ────────────────────────────────────────
 export function AdminDashboard() {
   const { user, signOut } = useAuth()
   const [adminProfile, setAdminProfile] = useState(null)
@@ -360,9 +642,15 @@ export function AdminDashboard() {
     )
   }
 
+  const TABS = [
+    { id: 'pending', label: `Pending (${pending.length})` },
+    { id: 'history', label: `History (${history.length})` },
+    { id: 'logs',    label: '📋 Audit Logs' },
+  ]
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Universal Navigation Bar */}
+      {/* Navigation */}
       <Navbar
         title="SkyResolve Supervisor"
         subtitle="Human-in-the-Loop Disruption Approval Center"
@@ -422,59 +710,66 @@ export function AdminDashboard() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 32px' }}>
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: '#f3f4f6', padding: '4px', borderRadius: '8px', width: 'fit-content' }}>
-          {['pending', 'history'].map(tab => (
+          {TABS.map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '7px 20px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                 fontSize: '13px', fontWeight: '600',
-                background: activeTab === tab ? '#fff' : 'transparent',
-                color: activeTab === tab ? '#1e40af' : '#6b7280',
-                boxShadow: activeTab === tab ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
+                background: activeTab === tab.id ? '#fff' : 'transparent',
+                color: activeTab === tab.id ? '#1e40af' : '#6b7280',
+                boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.15s'
               }}
             >
-              {tab === 'pending' ? `Pending Approvals (${pending.length})` : `History (${history.length})`}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Table */}
-        <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-          {(activeTab === 'pending' ? pending : history).length === 0 ? (
-            <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
-              <div style={{ marginBottom: '12px', color: '#cbd5e1' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-              </div>
-              <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                {activeTab === 'pending' ? 'No pending approvals' : 'No resolved requests yet'}
-              </div>
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                  {['Customer', 'Request Type', 'Booking', 'Created', 'Status'].map(col => (
-                    <th key={col} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(activeTab === 'pending' ? pending : history).map(req => (
-                  <ApprovalRow key={req.id} req={req} onSelect={handleSelectRow} />
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        {/* Logs Tab */}
+        {activeTab === 'logs' && <LogsPanel />}
 
-        {pending.length > 0 && activeTab === 'pending' && (
-          <p style={{ marginTop: '12px', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
-            Click any row to view full details and take action.
-          </p>
+        {/* Approvals Table (pending / history) */}
+        {activeTab !== 'logs' && (
+          <>
+            <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              {(activeTab === 'pending' ? pending : history).length === 0 ? (
+                <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af' }}>
+                  <div style={{ marginBottom: '12px', color: '#cbd5e1' }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
+                    {activeTab === 'pending' ? 'No pending approvals' : 'No resolved requests yet'}
+                  </div>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                      {['Customer', 'Request Type', 'Booking', 'Created', 'Status'].map(col => (
+                        <th key={col} style={{ padding: '12px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(activeTab === 'pending' ? pending : history).map(req => (
+                      <ApprovalRow key={req.id} req={req} onSelect={handleSelectRow} />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {pending.length > 0 && activeTab === 'pending' && (
+              <p style={{ marginTop: '12px', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
+                Click any row to view full details and take action.
+              </p>
+            )}
+          </>
         )}
       </div>
 

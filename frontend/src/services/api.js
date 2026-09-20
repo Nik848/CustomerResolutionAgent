@@ -139,6 +139,20 @@ export const api = {
     return handleApiResponse(res)
   },
 
+  getAuditLogs: async ({ customerId, eventType, limit } = {}) => {
+    const headers = await getAuthHeaders()
+    const params = new URLSearchParams()
+    if (customerId) params.set('customer_id', customerId)
+    if (eventType)  params.set('event_type', eventType)
+    if (limit)      params.set('limit', String(limit))
+    const qs = params.toString()
+    const res = await fetchWithTimeout(
+      `${API_URL}/api/admin/audit-logs${qs ? '?' + qs : ''}`,
+      { method: 'GET', headers }
+    )
+    return handleApiResponse(res)
+  },
+
   // Health check endpoint (unauthenticated)
   health: async () => {
     const res = await fetchWithTimeout(`${API_URL}/api/health`)
