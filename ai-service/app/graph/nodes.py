@@ -44,6 +44,13 @@ def understand_request(state: AgentState):
 
 def retrieve_customer(state: AgentState):
 
+    # 1. Use injected customer if already provided by backend API
+    injected_customer = state.get("customer")
+    if injected_customer:
+        return {
+            "customer": injected_customer
+        }
+
     customer_id = state.get("customer_id")
 
     if not customer_id:
@@ -51,6 +58,18 @@ def retrieve_customer(state: AgentState):
             "customer": None
         }
 
+    # 2. Try Node.js backend client
+    try:
+        from app.services.backend_client import get_customer as fetch_backend_customer
+        customer = fetch_backend_customer(customer_id)
+        if customer:
+            return {
+                "customer": customer
+            }
+    except Exception:
+        pass
+
+    # 3. Fallback to direct DB tool
     customer = get_customer_by_id(customer_id)
 
     return {
@@ -60,6 +79,13 @@ def retrieve_customer(state: AgentState):
 
 def retrieve_booking(state: AgentState):
 
+    # 1. Use injected bookings if already provided by backend API
+    injected_bookings = state.get("bookings")
+    if injected_bookings is not None and len(injected_bookings) > 0:
+        return {
+            "bookings": injected_bookings
+        }
+
     customer_id = state.get("customer_id")
 
     if not customer_id:
@@ -68,6 +94,18 @@ def retrieve_booking(state: AgentState):
             "selected_booking": None
         }
 
+    # 2. Try Node.js backend client
+    try:
+        from app.services.backend_client import get_bookings as fetch_backend_bookings
+        bookings = fetch_backend_bookings(customer_id)
+        if bookings:
+            return {
+                "bookings": bookings
+            }
+    except Exception:
+        pass
+
+    # 3. Fallback to direct DB tool
     bookings = get_bookings_by_customer_id(
         customer_id
     )
@@ -96,7 +134,7 @@ def select_booking(state: AgentState):
         }
 
     # ---------------------------------------------------------
-    # Step 1: Try to identify a flight number from the message
+    # Step 1: Explicit flight number mentioned by customer
     # Example: "SK-204", "SK204"
     # ---------------------------------------------------------
 
@@ -130,14 +168,31 @@ def select_booking(state: AgentState):
         }
 
     # ---------------------------------------------------------
-    # Step 2: If multiple bookings have the same flight number,
-    # use the requested situation/status.
+    # Step 2: Explicit booking ID / PNR mentioned by customer
+    # Example: "BOOK001", "SK4821X"
     # ---------------------------------------------------------
 
+    pnr_matches = []
+
+    for booking in bookings:
+
+        pnr = (booking.get("pnr") or "").lower().replace(" ", "")
+        booking_id = (booking.get("booking_id") or "").lower().replace(" ", "")
+
+        if (pnr and pnr in normalized_message) or (booking_id and booking_id in normalized_message):
+            pnr_matches.append(booking)
+
+    if len(pnr_matches) == 1:
+
+        return {
+            "selected_booking": pnr_matches[0]
+        }
+
+    # If flight or PNR matched multiple, narrow candidate scope to those
     candidate_bookings = (
         flight_matches
-        if flight_matches
-        else bookings
+        if len(flight_matches) > 1
+        else (pnr_matches if len(pnr_matches) > 1 else bookings)
     )
 
     intent = state.get(
@@ -148,19 +203,39 @@ def select_booking(state: AgentState):
         "requested_action"
     )
 
-    # Cancellation-related request
-    cancellation_request = (
-        intent == "cancellation"
+    # ---------------------------------------------------------
+    # Step 3: If request is about rebooking/refund/cancellation
+    # and exactly one disrupted/cancelled booking exists, select it
+    # ---------------------------------------------------------
+
+    cancellation_or_rebook_request = (
+        intent in {"cancellation", "refund", "rebooking", "rebook"}
         or requested_action in {
             "refund",
-            "rebooking"
+            "rebooking",
+            "rebook",
+            "cancel",
+            "cancellation"
         }
-        or "cancelled" in user_message
-        or "canceled" in user_message
-        or "refund" in user_message
+        or any(
+            kw in user_message
+            for kw in ("rebook", "refund", "cancel", "cancelled", "canceled", "reschedule")
+        )
     )
 
-    if cancellation_request:
+    if cancellation_or_rebook_request:
+
+        disrupted = [
+            booking
+            for booking in candidate_bookings
+            if booking.get("status") in {"cancelled", "delayed"}
+        ]
+
+        if len(disrupted) == 1:
+
+            return {
+                "selected_booking": disrupted[0]
+            }
 
         cancelled = [
             booking
@@ -174,27 +249,25 @@ def select_booking(state: AgentState):
                 "selected_booking": cancelled[0]
             }
 
-        if len(cancelled) > 1:
+        if len(cancelled) > 1 or len(disrupted) > 1:
 
             return {
                 "selected_booking": None,
                 "decision": {
                     "status": "needs_clarification",
-                    "reason": "Multiple cancelled bookings match the request."
+                    "reason": "Multiple disrupted bookings match the request."
                 },
                 "next_step": "clarify"
             }
 
-    # ---------------------------------------------------------
-    # Step 3: Delay-related request
-    # ---------------------------------------------------------
-
+    # Delay-related request handling
     delay_request = (
-        intent == "delay"
-        or intent == "hotel"
-        or intent == "lounge"
-        or intent == "meal_voucher"
-        or "delay" in user_message
+        intent in {"delay", "hotel", "lounge", "meal_voucher"}
+        or requested_action in {"meal_voucher", "lounge_access", "hotel"}
+        or any(
+            kw in user_message
+            for kw in ("delay", "delayed", "meal", "voucher", "lounge", "hotel")
+        )
     )
 
     if delay_request:
@@ -223,7 +296,7 @@ def select_booking(state: AgentState):
             }
 
     # ---------------------------------------------------------
-    # Step 4: If exactly one booking remains, use it.
+    # Step 4: If exactly one candidate booking exists, use it.
     # ---------------------------------------------------------
 
     if len(candidate_bookings) == 1:
@@ -335,8 +408,8 @@ def evaluate_request(state: AgentState):
 
         # Customer explicitly wants rebooking
         is_rebooking_requested = (
-            requested_action == "rebook"
-            or intent == "rebook"
+            requested_action in {"rebook", "rebooking"}
+            or intent in {"rebook", "rebooking"}
             or "rebook" in user_message
             or "alternative flight" in user_message
             or "another flight" in user_message

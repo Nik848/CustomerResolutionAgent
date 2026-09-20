@@ -55,7 +55,8 @@ def log_event(
         json.dump(
             events,
             file,
-            indent=2
+            indent=2,
+            default=str
         )
 
     return event

@@ -1,0 +1,22 @@
+[
+  {
+    "timestamp": "2026-09-20T12:45:10.600Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789908310596",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T12:50:10.989Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789908610986",
+      "message": "Please waive the fare difference."
+    }
+  }
+]
