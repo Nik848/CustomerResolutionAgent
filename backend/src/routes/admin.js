@@ -76,14 +76,18 @@ router.post('/:approvalId/approve', authenticate, requireAdmin, async (req, res)
   const actions = aiResult.actions || [];
   const bookingId = resolved.booking_id || aiResult.booking_id;
 
-  if (actions.length > 0 && bookingId) {
-    for (const action of actions) {
-      try {
-        const result = await executeAction(action, bookingId, resolved.customer_id);
-        actionResults.push(result);
-      } catch (err) {
-        console.error(`[admin/approve] Action ${action} failed:`, err.message);
-        actionResults.push({ success: false, action, message: err.message });
+  if (actions.length > 0) {
+    for (const actionItem of actions) {
+      const actionName = typeof actionItem === 'string' ? actionItem : actionItem.action;
+      const targetBookingId = (typeof actionItem === 'object' && actionItem.booking_id) ? actionItem.booking_id : bookingId;
+      if (actionName && targetBookingId) {
+        try {
+          const result = await executeAction(actionName, targetBookingId, resolved.customer_id);
+          actionResults.push(result);
+        } catch (err) {
+          console.error(`[admin/approve] Action ${actionName} failed:`, err.message);
+          actionResults.push({ success: false, action: actionName, message: err.message });
+        }
       }
     }
   }

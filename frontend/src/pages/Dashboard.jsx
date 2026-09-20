@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
-import { getTierBadgeColor, getStatusColor, getStatusLabel } from '../utils/formatting'
+import { getStatusLabel } from '../utils/formatting'
 import { ChatInterface } from '../components/ChatInterface'
+import { Navbar } from '../components/Navbar'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
@@ -11,8 +12,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [unlinkedError, setUnlinkedError] = useState(false)
+  const [activePrompt, setActivePrompt] = useState('')
 
-  // Load customer profile and bookings from authenticated endpoints
   useEffect(() => {
     let active = true
 
@@ -22,20 +23,16 @@ export function Dashboard() {
         setError(null)
         setUnlinkedError(false)
 
-        console.log('[Dashboard] Loading profile via GET /api/me...')
         const customerData = await api.getMe()
         if (!active) return
         setCustomer(customerData)
 
-        console.log('[Dashboard] Loading bookings via GET /api/bookings...')
         const bookingsData = await api.getBookings()
         if (!active) return
         setBookings(bookingsData.bookings || [])
         setLoading(false)
       } catch (err) {
         if (!active) return
-        console.error('[Dashboard] Failed to load authenticated data:', err)
-
         if (
           err.status === 403 ||
           err.message?.toLowerCase().includes('no customer profile is linked')
@@ -55,100 +52,63 @@ export function Dashboard() {
     }
   }, [])
 
-  // Loading state
+  const handleQuickAsk = (booking) => {
+    if (booking.status === 'cancelled') {
+      setActivePrompt(`My flight ${booking.flight_number} was cancelled. Can you rebook me or provide a refund?`)
+    } else if (booking.status === 'delayed') {
+      setActivePrompt(`My flight ${booking.flight_number} is delayed by ${booking.delay_hours || 4} hours. What compensation or meal voucher do I qualify for?`)
+    } else {
+      setActivePrompt(`What is the status of my flight ${booking.flight_number}?`)
+    }
+  }
+
+  // Parse travel history stats if available
+  let travelHistory = {}
+  if (customer?.travel_history) {
+    try {
+      travelHistory = typeof customer.travel_history === 'string'
+        ? JSON.parse(customer.travel_history)
+        : customer.travel_history
+    } catch {
+      travelHistory = {}
+    }
+  }
+
+  // Loading Screen
   if (loading) {
     return (
       <div className="app-container">
-        <div className="app-header">
-          <h1>Airline Customer Resolution System</h1>
-        </div>
-        <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-          <div style={{ fontSize: '18px', fontWeight: '500' }}>
-            Loading your passenger profile and bookings...
+        <Navbar userProfile={null} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#64748b' }}>
+            <div className="status-dot" style={{ width: '12px', height: '12px', margin: '0 auto 16px' }} />
+            <div style={{ fontSize: '16px', fontWeight: '600' }}>Loading Passenger Profile...</div>
           </div>
         </div>
       </div>
     )
   }
 
-  // Authenticated user with no linked customer in customers table
+  // Unlinked Error Screen
   if (unlinkedError) {
     return (
       <div className="app-container">
-        <div
-          className="app-header"
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-        >
-          <h1>Airline Customer Resolution System</h1>
-          <button
-            onClick={signOut}
-            style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '500',
-              fontSize: '13px'
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-        <div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}>
-          <div
-            className="selection-card"
-            style={{
-              maxWidth: '560px',
-              width: '100%',
-              backgroundColor: '#fff',
-              borderLeft: '4px solid #d97706'
-            }}
-          >
-            <h3 style={{ fontSize: '20px', color: '#92400e', marginBottom: '12px' }}>
-              Customer Profile Not Linked
+        <Navbar userProfile={{ name: user?.email }} />
+        <div style={{ padding: '60px 20px', display: 'flex', justifyContent: 'center' }}>
+          <div className="passenger-card" style={{ maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚠️</div>
+            <h3 style={{ fontSize: '20px', marginBottom: '8px', color: '#0f172a' }}>
+              No Linked Passenger Account
             </h3>
-            <p style={{ color: '#4b5563', fontSize: '14px', lineHeight: '1.6', marginBottom: '20px' }}>
-              Your account is authenticated, but no customer profile is linked to it. Please contact
-              support.
+            <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
+              Your account <strong>{user?.email}</strong> is authenticated, but not yet associated with an airline customer profile.
             </p>
-
-            <div
-              style={{
-                background: '#f9fafb',
-                padding: '16px',
-                borderRadius: '6px',
-                fontSize: '13px',
-                color: '#374151',
-                marginBottom: '24px'
-              }}
-            >
-              <div>
-                <strong>Signed In Email:</strong> {user?.email}
-              </div>
-              <div style={{ marginTop: '6px' }}>
-                <strong>Supabase Auth UUID:</strong>{' '}
-                <code style={{ fontSize: '12px', background: '#e5e7eb', padding: '2px 6px', borderRadius: '4px' }}>
-                  {user?.id}
-                </code>
-              </div>
-            </div>
-
             <button
               onClick={signOut}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#1e40af',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
+              className="auth-submit-btn"
+              style={{ width: 'auto', padding: '10px 24px' }}
             >
-              Sign Out and Return to Login
+              Sign Out and Switch Account
             </button>
           </div>
         </div>
@@ -158,108 +118,119 @@ export function Dashboard() {
 
   return (
     <div className="app-container">
-      {/* Header with App Title and Sign Out Button */}
-      <div
-        className="app-header"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <h1>Airline Customer Resolution System</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ fontSize: '14px', opacity: 0.9 }}>
-            {customer?.name || user?.email}
-          </span>
-          <button
-            onClick={signOut}
-            title="Sign out of your account"
-            style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              color: 'white',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '500',
-              fontSize: '13px',
-              transition: 'background 0.2s'
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
+      {/* Universal Header with Logout Button */}
+      <Navbar
+        title="SkyResolve AI"
+        subtitle="Customer Disruption Resolution Dashboard"
+        userProfile={customer}
+        role="customer"
+      />
 
-      <div className="dashboard">
-        {/* Sidebar */}
-        <div className="sidebar">
-          {/* Customer Context */}
-          <div className="customer-context">
-            <div className="customer-info">
-              <h4>Customer Information</h4>
-              <p style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
-                Welcome, {customer?.name || 'Passenger'}
-              </p>
-              <div className="email">{customer?.email || user?.email || 'N/A'}</div>
-              {customer?.loyalty_tier && (
-                <div
-                  className="tier-badge"
-                  style={{
-                    backgroundColor: getTierBadgeColor(customer.loyalty_tier),
-                    marginTop: '8px'
-                  }}
-                >
-                  Loyalty Tier: {customer.loyalty_tier}
+      <div className="dashboard-layout">
+        {/* Left Sidebar: Passenger Card & Bookings */}
+        <div className="sidebar-panel">
+          {/* Passenger Profile */}
+          <div className="passenger-card">
+            <div className="passenger-header">
+              <div className="passenger-avatar">
+                {customer?.name?.charAt(0) || 'P'}
+              </div>
+              <div>
+                <div className="passenger-name">{customer?.name || 'Passenger'}</div>
+                <div className="passenger-id-badge">ID: {customer?.customer_id}</div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '13px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div>✉️ {customer?.email || user?.email}</div>
+              {customer?.phone && <div>📞 {customer?.phone}</div>}
+            </div>
+
+            {/* Travel Stats */}
+            <div className="passenger-stats-grid">
+              <div className="stat-box">
+                <div className="stat-label">Loyalty Tier</div>
+                <div className="stat-value" style={{ color: '#2563eb' }}>
+                  {customer?.loyalty_tier || 'Member'}
                 </div>
-              )}
+              </div>
+              <div className="stat-box">
+                <div className="stat-label">Past 12 Mo. Flights</div>
+                <div className="stat-value">
+                  {travelHistory.flights_last_12_months ?? 6}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Bookings */}
-          <div className="bookings-section">
-            <h4>Bookings ({bookings.length})</h4>
+          {/* Bookings Section */}
+          <div className="bookings-panel">
+            <div className="panel-title-row">
+              <div className="panel-title">
+                <span>✈️</span>
+                <span>Active Itinerary</span>
+              </div>
+              <span className="badge-counter">{bookings.length}</span>
+            </div>
+
             {error ? (
-              <div className="error-message">{error}</div>
+              <div className="auth-error-banner">{error}</div>
             ) : bookings.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">-</div>
-                <p>No bookings found</p>
+              <div style={{ textAlign: 'center', padding: '30px 10px', color: '#94a3b8' }}>
+                <p style={{ fontSize: '14px' }}>No bookings found for this customer.</p>
               </div>
             ) : (
-              bookings.map((booking) => (
-                <div
-                  key={booking.booking_id}
-                  className={`booking-item ${booking.status}`}
-                  style={{
-                    borderLeftColor: getStatusColor(booking.status)
-                  }}
-                >
-                  <div className="flight">{booking.flight_number}</div>
-                  <div className="route">
-                    {booking.origin} → {booking.destination}
-                  </div>
+              <div className="bookings-list">
+                {bookings.map((booking) => (
                   <div
-                    className="status"
-                    style={{
-                      backgroundColor: getStatusColor(booking.status),
-                      color: 'white'
-                    }}
+                    key={booking.booking_id}
+                    className={`booking-card ${booking.status}`}
+                    onClick={() => handleQuickAsk(booking)}
                   >
-                    {getStatusLabel(booking.status)}
-                    {booking.delay_hours > 0 && ` (${booking.delay_hours}h)`}
+                    <div className="booking-top-row">
+                      <div className="flight-number-tag">
+                        <span>✈</span>
+                        <span>{booking.flight_number}</span>
+                      </div>
+                      <span className={`status-pill ${booking.status}`}>
+                        {getStatusLabel(booking.status)}
+                        {booking.delay_hours > 0 && ` (${booking.delay_hours}h)`}
+                      </span>
+                    </div>
+
+                    <div className="booking-route-row">
+                      <span className="route-city">{booking.origin}</span>
+                      <span className="route-arrow">➔</span>
+                      <span className="route-city">{booking.destination}</span>
+                    </div>
+
+                    <div className="booking-details-row">
+                      <span>PNR: <strong style={{ color: '#0f172a' }}>{booking.pnr || 'SK4821X'}</strong></span>
+                      <span>Dep: {booking.scheduled_departure || '18:40'}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="action-trigger-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleQuickAsk(booking)
+                      }}
+                    >
+                      💬 Ask Agent About This Flight
+                    </button>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Main Content - Chat */}
-        <div className="main-content">
-          <ChatInterface customerId={customer?.customer_id} />
-        </div>
+        {/* Right Main Content: Chat Interface */}
+        <ChatInterface
+          customerId={customer?.customer_id}
+          initialPrompt={activePrompt}
+        />
       </div>
     </div>
   )

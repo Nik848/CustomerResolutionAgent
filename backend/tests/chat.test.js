@@ -59,7 +59,15 @@ describe('Chat Routes', () => {
         };
       }
       if (table === 'approval_requests') {
+        // createApprovalRequest first does a select to check for existing pending,
+        // then inserts if none exists.
+        const selectChain = {};
+        selectChain.eq = jest.fn().mockReturnValue(selectChain);
+        selectChain.limit = jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({ data: null, error: null })
+        });
         return {
+          select: jest.fn().mockReturnValue(selectChain),
           insert: jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({ data: { id: 'appr-new' }, error: null })
@@ -102,7 +110,7 @@ describe('Chat Routes', () => {
   test('POST /api/chat handles supervisor approval required', async () => {
     processChat.mockResolvedValue({
       status: 'human_approval_required',
-      requires_human_approval: True = true,
+      requires_human_approval: true,
       approval_request: {
         booking_id: 'BOOK003',
         reason: 'Fare difference exceeds agent limit'
@@ -117,5 +125,23 @@ describe('Chat Routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('human_approval_required');
     expect(res.body.response).toContain('supervisor approval');
+  });
+
+  test('Customer cannot call /api/resume (returns 404 - customer resume disabled)', async () => {
+    const res = await request(app)
+      .post('/api/resume')
+      .set('Authorization', 'Bearer customer.token')
+      .send({ decision: 'approve' });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('Customer cannot call /api/chat/resume (returns 404 - customer resume disabled)', async () => {
+    const res = await request(app)
+      .post('/api/chat/resume')
+      .set('Authorization', 'Bearer customer.token')
+      .send({ decision: 'approve' });
+
+    expect(res.status).toBe(404);
   });
 });

@@ -44,22 +44,62 @@ async function createApprovalRequest({ customerId, bookingId, threadId, reqType,
 }
 
 /**
+ * Enrich approval requests with customer and booking context via separate queries.
+ * Completely avoids coupling to PostgREST relationship schema cache.
+ */
+async function enrichApprovals(approvals) {
+  if (!approvals || approvals.length === 0) return [];
+
+  const customerIds = [...new Set(approvals.map(a => a.customer_id).filter(Boolean))];
+  const bookingIds = [...new Set(approvals.map(a => a.booking_id).filter(Boolean))];
+
+  const [custRes, bookRes] = await Promise.all([
+    customerIds.length > 0
+      ? supabase.from('customers').select('customer_id, name, email, loyalty_tier').in('customer_id', customerIds)
+      : Promise.resolve({ data: [] }),
+    bookingIds.length > 0
+      ? supabase.from('bookings').select('booking_id, pnr, flight_number, origin, destination, date, scheduled_departure, status, delay_hours, disruption_reason, fare_difference').in('booking_id', bookingIds)
+      : Promise.resolve({ data: [] })
+  ]);
+
+  const customerMap = new Map((custRes.data || []).map(c => [c.customer_id.toUpperCase(), c]));
+  const bookingMap = new Map((bookRes.data || []).map(b => [b.booking_id.toUpperCase(), b]));
+
+  return approvals.map(appr => {
+    const cust = customerMap.get((appr.customer_id || '').toUpperCase()) || {};
+    const book = bookingMap.get((appr.booking_id || '').toUpperCase()) || {};
+
+    return {
+      ...appr,
+      customer_name: cust.name || null,
+      customer_email: cust.email || null,
+      loyalty_tier: cust.loyalty_tier || null,
+      pnr: book.pnr || null,
+      flight_number: book.flight_number || null,
+      origin: book.origin || null,
+      destination: book.destination || null,
+      travel_date: book.date || null,
+      scheduled_departure: book.scheduled_departure || null,
+      booking_status: book.status || null,
+      delay_hours: book.delay_hours || null,
+      disruption_reason: book.disruption_reason || null,
+      fare_difference: book.fare_difference || null
+    };
+  });
+}
+
+/**
  * Fetch all pending approval requests with customer and booking context.
  */
 async function getPendingApprovals() {
   const { data, error } = await supabase
     .from('approval_requests')
-    .select(`
-      *,
-      customers ( name, email, loyalty_tier ),
-      bookings ( pnr, flight_number, origin, destination, date, scheduled_departure, status, delay_hours, disruption_reason, fare_difference )
-    `)
+    .select('*')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(`Pending approvals fetch failed: ${error.message}`);
-
-  return (data || []).map(flattenApproval);
+  return enrichApprovals(data || []);
 }
 
 /**
@@ -68,17 +108,13 @@ async function getPendingApprovals() {
 async function getApprovalHistory(limit = 50) {
   const { data, error } = await supabase
     .from('approval_requests')
-    .select(`
-      *,
-      customers ( name, email, loyalty_tier ),
-      bookings ( pnr, flight_number, origin, destination, date, scheduled_departure, status, delay_hours, disruption_reason, fare_difference )
-    `)
+    .select('*')
     .in('status', ['approved', 'rejected'])
     .order('resolved_at', { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(`Approval history fetch failed: ${error.message}`);
-  return (data || []).map(flattenApproval);
+  return enrichApprovals(data || []);
 }
 
 /**
@@ -87,20 +123,20 @@ async function getApprovalHistory(limit = 50) {
 async function getApprovalById(approvalId) {
   const { data, error } = await supabase
     .from('approval_requests')
-    .select(`
-      *,
-      customers ( name, email, loyalty_tier ),
-      bookings ( pnr, flight_number, origin, destination, date, scheduled_departure, status, delay_hours, disruption_reason, fare_difference )
-    `)
+    .select('*')
     .eq('id', approvalId)
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code === 'PGRST116') throw Object.assign(new Error('Not found'), { status: 404 });
     throw new Error(`Approval fetch failed: ${error.message}`);
   }
-  return flattenApproval(data);
+  if (!data) {
+    throw Object.assign(new Error('Not found'), { status: 404 });
+  }
+
+  const enriched = await enrichApprovals([data]);
+  return enriched[0];
 }
 
 /**
@@ -130,29 +166,6 @@ async function resolveApproval({ approvalId, decision, resolvedBy, resolutionNot
 
   if (error) throw new Error(`Approval resolution failed: ${error.message}`);
   return { ...data, thread_id: current.thread_id };
-}
-
-/**
- * Flatten the nested Supabase join response into a flat object.
- */
-function flattenApproval(row) {
-  const { customers, bookings, ...rest } = row;
-  return {
-    ...rest,
-    customer_name: customers?.name,
-    customer_email: customers?.email,
-    loyalty_tier: customers?.loyalty_tier,
-    pnr: bookings?.pnr,
-    flight_number: bookings?.flight_number,
-    origin: bookings?.origin,
-    destination: bookings?.destination,
-    travel_date: bookings?.date,
-    scheduled_departure: bookings?.scheduled_departure,
-    booking_status: bookings?.status,
-    delay_hours: bookings?.delay_hours,
-    disruption_reason: bookings?.disruption_reason,
-    fare_difference: bookings?.fare_difference
-  };
 }
 
 module.exports = {

@@ -90,71 +90,13 @@ export const useChat = (customerId) => {
     [threadId]
   )
 
-  const submitApproval = useCallback(
-    async (approved) => {
-      if (!threadId) {
-        setError('No active session')
-        return
-      }
-
-      setResuming(true)
-      setError(null)
-
-      try {
-        // Send "approve" or "reject" — matches the ResumeRequest schema on the backend
-        const result = await api.resume(threadId, approved ? 'approve' : 'reject')
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'system',
-            type: 'approval_decision',
-            content: approved ? 'Waiver approved by supervisor' : 'Waiver rejected by supervisor',
-            timestamp: new Date()
-          }
-        ])
-
-        if (result.response) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: 'agent',
-              content: result.response,
-              decision: result.decision,
-              actionResult: result.action_result,
-              timestamp: new Date()
-            }
-          ])
-        }
-
-        setApproval(null)
-      } catch (err) {
-        setError(err.message || 'Failed to submit approval')
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'system',
-            type: 'error',
-            content: err.message,
-            timestamp: new Date()
-          }
-        ])
-      } finally {
-        setResuming(false)
-      }
-    },
-    [threadId]
-  )
-
   return {
     messages,
     threadId,
     loading,
     error,
     approval,
-    resuming,
     sendMessage,
-    submitApproval,
     setError
   }
 }

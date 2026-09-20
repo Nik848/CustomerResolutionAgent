@@ -74,13 +74,11 @@ export function SignUp({ onSwitchToLogin }) {
 
       console.log('[SignUp] Sign up successful:', data?.user?.id)
 
-      // If email confirmation is enabled, session will be null
       if (data?.user && !data?.session) {
         setSuccessMessage(
           'Registration successful! If email confirmation is enabled on your project, please check your inbox to activate your account.'
         )
       }
-      // If session exists, onAuthStateChange will automatically log the user in!
     } catch (err) {
       console.error('[SignUp] Unexpected error during sign up:', err)
       setError('An unexpected error occurred during sign up. Please try again.')
@@ -90,233 +88,121 @@ export function SignUp({ onSwitchToLogin }) {
   }
 
   return (
-    <div className="selection-screen">
-      <div className="selection-card" style={{ maxWidth: '440px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              background: '#eff6ff',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px',
-              fontSize: '24px',
-              color: '#1e40af'
-            }}
-          >
-            ✈
-          </div>
-          <h2>Create Your Account</h2>
-          <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Register to access passenger resolution services
-          </p>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        <div className="auth-brand-badge">
+          <span>✈</span>
         </div>
 
+        <h2 className="auth-title">Create Account</h2>
+        <p className="auth-subtitle">
+          Register to access your airline customer resolution portal
+        </p>
+
         {error && (
-          <div
-            className="error-message"
-            style={{
-              marginBottom: '20px',
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#991b1b',
-              fontSize: '13px'
-            }}
-          >
-            {error}
+          <div className="auth-error-banner">
+            <span>⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
-        {successMessage && (
+        {successMessage ? (
           <div
             style={{
-              marginBottom: '20px',
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              color: '#166534',
-              fontSize: '13px',
-              lineHeight: 1.5
+              padding: '24px',
+              backgroundColor: '#ecfdf5',
+              borderRadius: '12px',
+              border: '1px solid #a7f3d0',
+              textAlign: 'center',
+              marginBottom: '24px'
             }}
           >
-            {successMessage}
-            <div style={{ marginTop: '12px' }}>
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
-                style={{
-                  backgroundColor: '#1e40af',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Proceed to Sign In
-              </button>
-            </div>
+            <div style={{ fontSize: '32px', marginBottom: '8px' }}>✓</div>
+            <h3 style={{ color: '#065f46', fontSize: '18px', marginBottom: '8px' }}>
+              Registration Successful!
+            </h3>
+            <p style={{ color: '#047857', fontSize: '14px', lineHeight: 1.6 }}>
+              {successMessage}
+            </p>
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="auth-submit-btn"
+              style={{ marginTop: '16px' }}
+            >
+              Proceed to Sign In
+            </button>
           </div>
-        )}
-
-        {!successMessage && (
+        ) : (
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="signup-name"
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-name">
                 Full Name
               </label>
               <input
                 id="signup-name"
                 type="text"
+                className="form-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Priya Nair"
+                placeholder="e.g. Priya Nair"
                 disabled={loading}
                 autoComplete="name"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
               />
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="signup-email"
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-email">
                 Email Address
               </label>
               <input
                 id="signup-email"
                 type="email"
+                className="form-input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
                 disabled={loading}
                 autoComplete="email"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
               />
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label
-                htmlFor="signup-password"
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-password">
                 Password (min. 6 characters)
               </label>
               <input
                 id="signup-password"
                 type="password"
+                className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={loading}
                 autoComplete="new-password"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label
-                htmlFor="signup-confirm-password"
-                style={{
-                  display: 'block',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#374151',
-                  marginBottom: '6px'
-                }}
-              >
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-confirm-password">
                 Confirm Password
               </label>
               <input
                 id="signup-confirm-password"
                 type="password"
+                className="form-input"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={loading}
                 autoComplete="new-password"
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
               />
             </div>
 
             <button
               type="submit"
+              className="auth-submit-btn"
               disabled={loading}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#1e40af',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                transition: 'background-color 0.2s'
-              }}
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -325,10 +211,10 @@ export function SignUp({ onSwitchToLogin }) {
 
         <div
           style={{
-            marginTop: '24px',
+            marginTop: '20px',
             textAlign: 'center',
             fontSize: '13px',
-            color: '#6b7280'
+            color: '#64748b'
           }}
         >
           Already have an account?{' '}
@@ -338,7 +224,7 @@ export function SignUp({ onSwitchToLogin }) {
             style={{
               background: 'none',
               border: 'none',
-              color: '#1e40af',
+              color: '#2563eb',
               fontWeight: '600',
               cursor: 'pointer',
               padding: 0,

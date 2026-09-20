@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services/api'
 import { useAuth } from '../hooks/useAuth'
+import { Navbar } from '../components/Navbar'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -359,46 +360,13 @@ export function AdminDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', padding: '0 32px', boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 10px', fontSize: '18px' }}>
-              ✈️
-            </div>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#fff', lineHeight: 1 }}>
-                Admin Dashboard
-              </h1>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                Airline Customer Resolution · Supervisor Portal
-              </p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>
-                {adminProfile?.name || 'Supervisor'}
-              </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>
-                {adminProfile?.email || user?.email}
-              </div>
-            </div>
-            <button
-              onClick={signOut}
-              style={{
-                background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
-                color: '#fff', padding: '7px 16px', borderRadius: '6px',
-                cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.background = 'rgba(255,255,255,0.25)'}
-              onMouseLeave={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Universal Navigation Bar */}
+      <Navbar
+        title="SkyResolve Supervisor"
+        subtitle="Human-in-the-Loop Disruption Approval Center"
+        userProfile={adminProfile}
+        role="admin"
+      />
 
       {/* Toast */}
       {toast && (

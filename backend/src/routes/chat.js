@@ -4,7 +4,7 @@ const { authenticate, requireCustomer } = require('../middleware/auth');
 const { getBookingsByCustomerId } = require('../services/bookingService');
 const { executeAction } = require('../services/bookingService');
 const { createApprovalRequest } = require('../services/approvalService');
-const { processChat, resumeWorkflow } = require('../services/aiService');
+const { processChat } = require('../services/aiService');
 const { appendAuditEvent } = require('../utils/audit');
 
 const handleChat = async (req, res) => {
@@ -69,31 +69,41 @@ const handleChat = async (req, res) => {
     });
   }
 
-  // Execute policy-approved actions on the backend if not already executed by AI service
-  let actionResult = aiResult.action_result;
+  // Execute policy-approved actions exclusively on the Node backend
   const actions = aiResult.actions || aiResult.decision?.actions || [];
-  const bookingId = aiResult.booking_id || aiResult.selected_booking?.booking_id || aiResult.decision?.booking_id;
+  const defaultBookingId = aiResult.booking_id || aiResult.selected_booking?.booking_id || aiResult.decision?.booking_id;
+  let actionResult = null;
 
-  if (!actionResult && actions.length > 0 && bookingId) {
+  if (actions.length > 0) {
     const actionResults = [];
-    for (const action of actions) {
-      try {
-        const result = await executeAction(action, bookingId, customerId);
-        actionResults.push(result);
-      } catch (err) {
-        console.error(`[chat] Action ${action} failed:`, err.message);
-        actionResults.push({ success: false, action, message: err.message });
+    for (const actionItem of actions) {
+      const actionName = typeof actionItem === 'string' ? actionItem : actionItem.action;
+      const targetBookingId = (typeof actionItem === 'object' && actionItem.booking_id) ? actionItem.booking_id : defaultBookingId;
+      if (actionName && targetBookingId) {
+        try {
+          const result = await executeAction(actionName, targetBookingId, customerId);
+          actionResults.push(result);
+        } catch (err) {
+          console.error(`[chat] Action ${actionName} failed:`, err.message);
+          actionResults.push({ success: false, action: actionName, message: err.message });
+        }
       }
     }
 
-    appendAuditEvent({
-      event_type: 'action_executed',
-      customer_id: customerId,
-      booking_id: bookingId,
-      details: { actions, results: actionResults }
-    });
+    if (actionResults.length > 0) {
+      appendAuditEvent({
+        event_type: 'action_executed',
+        customer_id: customerId,
+        booking_id: defaultBookingId,
+        details: { actions, results: actionResults }
+      });
+      actionResult = actionResults.length === 1 ? actionResults[0] : actionResults;
+    }
+  }
 
-    actionResult = actionResults.length === 1 ? actionResults[0] : (actionResults.length > 1 ? actionResults : null);
+  // Preserve any directly mocked action_result for backwards compatibility with tests
+  if (!actionResult && aiResult.action_result) {
+    actionResult = aiResult.action_result;
   }
 
   return res.json({
@@ -105,52 +115,9 @@ const handleChat = async (req, res) => {
   });
 };
 
-const handleResume = async (req, res) => {
-  const { decision } = req.body;
-  const { thread_id } = req.query;
-
-  if (!thread_id) return res.status(400).json({ detail: 'thread_id is required' });
-  if (!['approve', 'reject'].includes(decision)) {
-    return res.status(400).json({ detail: "decision must be 'approve' or 'reject'" });
-  }
-
-  try {
-    const aiResult = await resumeWorkflow({ threadId: thread_id, decision });
-
-    // Execute any actions from resumed workflow
-    let actionResults = [];
-    const actions = aiResult.actions || [];
-    const bookingId = aiResult.booking_id || aiResult.selected_booking?.booking_id;
-    const customerId = req.customer.customer_id;
-
-    if (actions.length > 0 && bookingId) {
-      for (const action of actions) {
-        const result = await executeAction(action, bookingId, customerId);
-        actionResults.push(result);
-      }
-    }
-
-    return res.json({
-      status: 'completed',
-      response: aiResult.response,
-      decision: aiResult.decision,
-      action_result: actionResults.length === 1 ? actionResults[0] : (actionResults.length > 1 ? actionResults : null),
-      human_approval: aiResult.human_approval
-    });
-  } catch (err) {
-    if (err.isAiUnavailable) {
-      return res.status(503).json({ status: 'error', response: 'AI service unavailable.' });
-    }
-    console.error('[resume] Error:', err.message);
-    return res.status(500).json({ status: 'error', response: 'Failed to resume workflow.' });
-  }
-};
-
 router.post('/', authenticate, requireCustomer, handleChat);
-router.post('/resume', authenticate, requireCustomer, handleResume);
-
+ 
 module.exports = {
   router,
-  handleChat,
-  handleResume
+  handleChat
 };

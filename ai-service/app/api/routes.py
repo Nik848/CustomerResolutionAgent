@@ -1,9 +1,10 @@
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from langgraph.types import Command
 
 from app.graph.workflow import build_graph
+from app.auth.internal import verify_internal_api_key
 
 router = APIRouter()
 
@@ -24,10 +25,10 @@ class AgentResumeRequest(BaseModel):
     decision: str
 
 
-@router.post("/agent/process")
+@router.post("/agent/process", dependencies=[Depends(verify_internal_api_key)])
 def agent_process(request: AgentProcessRequest):
     """
-    Main entry point for Node.js backend.
+    Main entry point for Node.js backend. Protected by X-Internal-API-Key.
     Accepts customer profile, bookings, message, thread_id.
     Runs LangGraph workflow with injected data and returns structured decision.
     """
@@ -80,10 +81,11 @@ def agent_process(request: AgentProcessRequest):
     }
 
 
-@router.post("/agent/resume")
+@router.post("/agent/resume", dependencies=[Depends(verify_internal_api_key)])
 def agent_resume(request: AgentResumeRequest):
     """
     Resume a paused LangGraph workflow after supervisor approve/reject.
+    Protected by X-Internal-API-Key. Called exclusively by Node.js backend.
     """
     if request.decision not in {"approve", "reject"}:
         raise HTTPException(

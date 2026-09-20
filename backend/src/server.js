@@ -5,10 +5,9 @@ require('dotenv').config();
 
 const meRoutes = require('./routes/me');
 const bookingsRoutes = require('./routes/bookings');
-const { router: chatRouter, handleResume } = require('./routes/chat');
+const { router: chatRouter } = require('./routes/chat');
 const adminRoutes = require('./routes/admin');
 const internalRoutes = require('./routes/internal');
-const { authenticate, requireCustomer } = require('./middleware/auth');
 
 const app = express();
 
@@ -52,7 +51,6 @@ app.get('/api/health', (req, res) => {
 app.use('/api/me', meRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/chat', chatRouter);
-app.post('/api/resume', authenticate, requireCustomer, handleResume);
 app.use('/api/admin/approvals', adminRoutes);
 app.use('/api/internal', internalRoutes);
 

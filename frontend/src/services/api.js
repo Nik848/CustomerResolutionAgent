@@ -82,20 +82,6 @@ export const api = {
     return handleApiResponse(res)
   },
 
-  // Resumes paused LangGraph workflow with supervisor decision
-  resume: async (threadId, decision) => {
-    const headers = await getAuthHeaders()
-    const res = await fetchWithTimeout(
-      `${API_URL}/api/resume?thread_id=${encodeURIComponent(threadId)}`,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ decision })
-      }
-    )
-    return handleApiResponse(res)
-  },
-
   // ─── Admin Endpoints ──────────────────────────────────────────
   getAdminApprovals: async () => {
     const headers = await getAuthHeaders()

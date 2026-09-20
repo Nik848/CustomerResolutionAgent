@@ -18,5 +18,178 @@
       "thread_id": "thread-CUST001-1789908610986",
       "message": "Please waive the fare difference."
     }
+  },
+  {
+    "timestamp": "2026-09-20T13:02:53.724Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789909373721",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:04:45.725Z",
+    "event_type": "action_executed",
+    "customer_id": "CUST001",
+    "booking_id": "BOOK001",
+    "details": {
+      "action": "full_refund",
+      "result": {
+        "success": true,
+        "action": "initiate_refund",
+        "booking_id": "BOOK001",
+        "customer_id": "CUST001",
+        "message": "Refund has been successfully initiated."
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:05:02.704Z",
+    "event_type": "action_executed",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK004",
+    "details": {
+      "action": "meal_voucher",
+      "result": {
+        "success": false,
+        "action": "issue_meal_voucher",
+        "message": "Meal voucher has already been issued."
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:05:03.586Z",
+    "event_type": "action_executed",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK004",
+    "details": {
+      "action": "lounge_access",
+      "result": {
+        "success": false,
+        "action": "grant_lounge_access",
+        "message": "Lounge access has already been granted."
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:05:03.814Z",
+    "event_type": "action_executed",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK004",
+    "details": {
+      "action": "hotel_delayed_hours",
+      "result": {
+        "success": false,
+        "action": "arrange_hotel",
+        "message": "Hotel accommodation has already been arranged."
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:25:29.232Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789910729228",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:25:30.799Z",
+    "event_type": "human_approval_received",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK003",
+    "details": {
+      "approval_id": "appr-1",
+      "decision": "approved",
+      "admin": "auth-admin-1"
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:27:15.686Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789910835682",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:27:16.111Z",
+    "event_type": "human_approval_received",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK003",
+    "details": {
+      "approval_id": "appr-1",
+      "decision": "approved",
+      "admin": "auth-admin-1"
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:39:57.425Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789911597422",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:39:57.874Z",
+    "event_type": "human_approval_received",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK003",
+    "details": {
+      "approval_id": "appr-1",
+      "decision": "approved",
+      "admin": "auth-admin-1"
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:43:54.735Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789911834731",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:43:55.262Z",
+    "event_type": "human_approval_received",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK003",
+    "details": {
+      "approval_id": "appr-1",
+      "decision": "approved",
+      "admin": "auth-admin-1"
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:45:29.595Z",
+    "event_type": "human_approval_requested",
+    "customer_id": "CUST001",
+    "booking_id": null,
+    "details": {
+      "thread_id": "thread-CUST001-1789911929593",
+      "message": "Please waive the fare difference."
+    }
+  },
+  {
+    "timestamp": "2026-09-20T13:45:30.413Z",
+    "event_type": "human_approval_received",
+    "customer_id": "CUST003",
+    "booking_id": "BOOK003",
+    "details": {
+      "approval_id": "appr-1",
+      "decision": "approved",
+      "admin": "auth-admin-1"
+    }
   }
 ]

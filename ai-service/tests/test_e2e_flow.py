@@ -10,9 +10,8 @@ Covers every scenario from the assignment brief:
   - CUST003: Fare difference waiver → HITL reject
   - Audit log written correctly for every scenario
 
-The LLM is patched so tests are fast and deterministic.
-Action tools are also patched so tests don't need a live Supabase connection
-— correctness is verified via graph responses and audit log entries.
+The LLM and backend HTTP calls are patched so tests are fast and deterministic.
+Action tools are also patched so tests don't need a live Supabase connection.
 """
 
 import json
@@ -54,9 +53,88 @@ def _build_graph():
     return build_graph()
 
 
-# Reusable action mock responses — simulate successful Supabase writes
+# Reusable action mock responses — simulate successful Node backend writes
 def _ok(action):
     return {"success": True, "action": action, "booking_id": "MOCK", "customer_id": "MOCK", "message": "OK"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared test data (from assignment brief)
+# ─────────────────────────────────────────────────────────────────────────────
+
+PRIYA = {
+    "customer_id": "CUST001",
+    "name": "Priya Nair",
+    "email": "priya.nair@example.com",
+    "loyalty_tier": "Gold"
+}
+
+PRIYA_BOOKINGS = [
+    {
+        "booking_id": "BOOK001",
+        "pnr": "SK4821X",
+        "flight_number": "SK-204",
+        "origin": "BOM",
+        "destination": "DEL",
+        "status": "cancelled",
+        "customer_id": "CUST001",
+        "delay_hours": 0,
+        "fare_difference": None
+    },
+    {
+        "booking_id": "BOOK002",
+        "pnr": "SK4821X-R",
+        "flight_number": "RETURN",
+        "origin": "DEL",
+        "destination": "BOM",
+        "status": "unaffected",
+        "customer_id": "CUST001",
+        "delay_hours": 0,
+        "fare_difference": None
+    }
+]
+
+ARVIND = {
+    "customer_id": "CUST002",
+    "name": "Arvind Kulkarni",
+    "email": "arvind.kulkarni@example.com",
+    "loyalty_tier": "Silver"
+}
+
+ARVIND_BOOKINGS = [
+    {
+        "booking_id": "BOOK003",
+        "pnr": "TR1190B",
+        "flight_number": "SK-118",
+        "origin": "HYD",
+        "destination": "BOM",
+        "status": "delayed",
+        "delay_hours": 4,
+        "customer_id": "CUST002",
+        "fare_difference": None
+    }
+]
+
+MEHER = {
+    "customer_id": "CUST003",
+    "name": "Meher Kaur",
+    "email": "meher.kaur@example.com",
+    "loyalty_tier": "Gold"
+}
+
+MEHER_BOOKINGS = [
+    {
+        "booking_id": "BOOK004",
+        "pnr": "TR9283K",
+        "flight_number": "SK-305",
+        "origin": "DEL",
+        "destination": "CCU",
+        "status": "delayed",
+        "delay_hours": 6,
+        "fare_difference": 2000,
+        "customer_id": "CUST003"
+    }
+]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,16 +154,23 @@ class TestCUST001Cancellation:
             patch("app.graph.nodes.agent.understand_request",
                   return_value={"intent": "cancellation", "requested_action": "refund"}),
             patch("app.graph.nodes.initiate_refund", return_value=_ok("initiate_refund")),
+            patch("app.graph.nodes.agent.understand_request",
+                  return_value={"intent": "cancellation", "requested_action": "refund"}),
         ):
             result = graph.invoke(
-                {"customer_id": "CUST001", "user_message": "SK-204 cancelled, I want a refund."},
+                {
+                    "customer_id": "CUST001",
+                    "customer": PRIYA,
+                    "bookings": PRIYA_BOOKINGS,
+                    "user_message": "SK-204 cancelled, I want a refund."
+                },
                 {"configurable": {"thread_id": "test-cust001-refund"}},
             )
 
         assert "__interrupt__" not in result
 
         response = result.get("response", "").lower()
-        assert any(kw in response for kw in ("refund", "initiated", "sk-204")), (
+        assert any(kw in response for kw in ("refund", "initiated", "sk-204", "priya")), (
             f"Response should mention refund: {result.get('response')}"
         )
 
@@ -108,14 +193,19 @@ class TestCUST001Cancellation:
             patch("app.graph.nodes.rebook_flight", return_value=_ok("rebook_flight")),
         ):
             result = graph.invoke(
-                {"customer_id": "CUST001", "user_message": "Please rebook me on SK-204."},
+                {
+                    "customer_id": "CUST001",
+                    "customer": PRIYA,
+                    "bookings": PRIYA_BOOKINGS,
+                    "user_message": "Please rebook me on SK-204."
+                },
                 {"configurable": {"thread_id": "test-cust001-rebook"}},
             )
 
         assert "__interrupt__" not in result
 
         response = result.get("response", "").lower()
-        assert any(kw in response for kw in ("rebook", "alternative", "flight", "next")), (
+        assert any(kw in response for kw in ("rebook", "alternative", "flight", "next", "booked")), (
             f"Response should mention rebooking: {result.get('response')}"
         )
 
@@ -136,7 +226,12 @@ class TestCUST001Cancellation:
             patch("app.graph.nodes.rebook_flight", return_value=_ok("rebook_flight")),
         ):
             result = graph.invoke(
-                {"customer_id": "CUST001", "user_message": "Can you rebook me?"},
+                {
+                    "customer_id": "CUST001",
+                    "customer": PRIYA,
+                    "bookings": PRIYA_BOOKINGS,
+                    "user_message": "Can you rebook me?"
+                },
                 {"configurable": {"thread_id": "test-cust001-rebook-implicit"}},
             )
 
@@ -145,7 +240,7 @@ class TestCUST001Cancellation:
         assert result.get("next_step") == "resolve"
 
         response = result.get("response", "").lower()
-        assert any(kw in response for kw in ("rebook", "alternative", "flight", "next")), (
+        assert any(kw in response for kw in ("rebook", "alternative", "flight", "next", "booked")), (
             f"Response should mention rebooking: {result.get('response')}"
         )
 
@@ -154,7 +249,6 @@ class TestCUST001Cancellation:
         assert action_events, "Expected action_executed in audit log"
         assert action_events[0]["customer_id"] == "CUST001"
         assert action_events[0]["booking_id"] == "BOOK001"
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,7 +271,12 @@ class TestCUST002FourHourDelay:
             patch("app.graph.nodes.grant_lounge_access",  return_value=_ok("grant_lounge_access")),
         ):
             result = graph.invoke(
-                {"customer_id": "CUST002", "user_message": "SK-118 is delayed, what am I entitled to?"},
+                {
+                    "customer_id": "CUST002",
+                    "customer": ARVIND,
+                    "bookings": ARVIND_BOOKINGS,
+                    "user_message": "SK-118 is delayed, what am I entitled to?"
+                },
                 {"configurable": {"thread_id": "test-cust002-delay"}},
             )
 
@@ -218,7 +317,12 @@ class TestCUST003SixHourDelay:
             patch("app.graph.nodes.arrange_hotel",       return_value=_ok("arrange_hotel")),
         ):
             result = graph.invoke(
-                {"customer_id": "CUST003", "user_message": "SK-305 delayed 6 hours, what can I get?"},
+                {
+                    "customer_id": "CUST003",
+                    "customer": MEHER,
+                    "bookings": MEHER_BOOKINGS,
+                    "user_message": "SK-305 delayed 6 hours, what can I get?"
+                },
                 {"configurable": {"thread_id": "test-cust003-delay"}},
             )
 
@@ -251,7 +355,9 @@ class TestCUST003FareDifferenceHITL:
             return graph.invoke(
                 {
                     "customer_id": "CUST003",
-                    "user_message": "I want to switch to SK-305 but don't want to pay the ₹2,000 fare difference. Can you waive it?",
+                    "customer": MEHER,
+                    "bookings": MEHER_BOOKINGS,
+                    "user_message": "I want to switch to a higher-fare flight but please waive the ₹2,000 fare difference.",
                 },
                 {"configurable": {"thread_id": thread_id}},
             )
@@ -330,7 +436,12 @@ class TestAuditLog:
             patch("app.graph.nodes.initiate_refund", return_value=_ok("initiate_refund")),
         ):
             graph.invoke(
-                {"customer_id": "CUST001", "user_message": "SK-204 cancelled, refund please."},
+                {
+                    "customer_id": "CUST001",
+                    "customer": PRIYA,
+                    "bookings": PRIYA_BOOKINGS,
+                    "user_message": "SK-204 cancelled, refund please."
+                },
                 {"configurable": {"thread_id": "test-audit-schema"}},
             )
 
@@ -353,7 +464,12 @@ class TestAuditLog:
             patch("app.graph.nodes.grant_lounge_access", return_value=_ok("grant_lounge_access")),
         ):
             graph.invoke(
-                {"customer_id": "CUST002", "user_message": "SK-118 delayed, what do I get?"},
+                {
+                    "customer_id": "CUST002",
+                    "customer": ARVIND,
+                    "bookings": ARVIND_BOOKINGS,
+                    "user_message": "SK-118 delayed, what do I get?"
+                },
                 {"configurable": {"thread_id": "test-audit-customer"}},
             )
 

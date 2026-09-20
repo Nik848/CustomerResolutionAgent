@@ -4,32 +4,46 @@ import { formatTime } from '../utils/formatting'
 import { ActionCard } from './ActionCard'
 import { ApprovalPanel } from './ApprovalPanel'
 
-export function ChatInterface({ customerId }) {
+const QUICK_PROMPTS = [
+  'Can you rebook me?',
+  'I want a refund for my cancelled flight',
+  'Am I eligible for a meal voucher or lounge access?',
+  'Please waive the fare difference for my new booking'
+]
+
+export function ChatInterface({ customerId, initialPrompt = '' }) {
   const {
     messages,
     loading,
     error,
     approval,
-    resuming,
     sendMessage,
-    submitApproval,
     setError
   } = useChat(customerId)
 
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
+
+  // Sync initialPrompt if provided
+  useEffect(() => {
+    if (initialPrompt) {
+      setInputValue(initialPrompt)
+      textareaRef.current?.focus()
+    }
+  }, [initialPrompt])
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || loading) return
+  const handleSendMessage = async (textToSend = null) => {
+    const text = (textToSend || inputValue).trim()
+    if (!text || loading || resuming) return
 
-    const message = inputValue.trim()
     setInputValue('')
-    await sendMessage(message)
+    await sendMessage(text)
   }
 
   const handleKeyPress = (e) => {
@@ -40,65 +54,91 @@ export function ChatInterface({ customerId }) {
   }
 
   return (
-    <div className="chat-container">
-      {/* Messages */}
-      <div className="chat-messages">
+    <div className="chat-panel">
+      {/* Top Header */}
+      <div className="chat-panel-header">
+        <div className="agent-identity">
+          <div className="agent-avatar">🤖</div>
+          <div>
+            <div className="agent-title">SkyResolve AI Assistant</div>
+            <div className="agent-status-text">
+              <span className="status-dot"></span>
+              Autonomous Agent Active · LangGraph Engine
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Scroll Area */}
+      <div className="chat-messages-area">
         {messages.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">•</div>
-            <p>
-              Start a conversation to request assistance with your booking
+          <div className="chat-empty-state">
+            <div className="chat-empty-icon">✈️</div>
+            <h3 className="chat-empty-title">How can I resolve your disruption today?</h3>
+            <p className="chat-empty-desc">
+              I can instantly check policy eligibility, process full refunds, rebook flights, and issue meal vouchers or lounge access.
             </p>
+
+            <div className="prompt-chips-container">
+              {QUICK_PROMPTS.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  className="prompt-chip"
+                  onClick={() => handleSendMessage(prompt)}
+                  disabled={loading}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((msg, idx) => (
-            <div key={idx}>
+            <div key={idx} className="message-container">
               {msg.type === 'approval_required' && (
                 <ApprovalPanel
                   approval={msg.content}
-                  resuming={resuming}
-                  onSubmit={submitApproval}
                 />
               )}
 
               {msg.type === 'approval_decision' && (
-                <div className="message system">
-                  <div className="message-bubble">
-                    ✓ {msg.content}
+                <div className="action-card success">
+                  <div className="action-card-header">
+                    <span className="action-card-icon">✓</span>
+                    <span className="action-card-title">Supervisor Resolution</span>
                   </div>
+                  <p className="action-card-body">{msg.content}</p>
                 </div>
               )}
 
               {msg.type === 'error' && (
-                <div className="error-message">
-                  ✗ {msg.content}
+                <div className="action-card rejected">
+                  <div className="action-card-header">
+                    <span className="action-card-icon">⚠</span>
+                    <span className="action-card-title">Resolution Notice</span>
+                  </div>
+                  <p className="action-card-body">{msg.content}</p>
                 </div>
               )}
 
               {!msg.type && (
-                <div className={`message ${msg.role}`}>
-                  <div>
+                <div className={`message-row ${msg.role}`}>
+                  <div className="message-content-wrapper">
                     <div className="message-bubble">
-                      {msg.content}
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
 
-                      {/* Render multiple action results */}
+                      {/* Render structured action cards if actions were performed */}
                       {Array.isArray(msg.actionResult) ? (
-                        msg.actionResult.map((action, actionIdx) => (
-                          <ActionCard
-                            key={actionIdx}
-                            action={action}
-                          />
+                        msg.actionResult.map((action, aIdx) => (
+                          <ActionCard key={aIdx} action={action} />
                         ))
                       ) : (
-                        msg.actionResult && (
-                          <ActionCard action={msg.actionResult} />
-                        )
+                        msg.actionResult && <ActionCard action={msg.actionResult} />
                       )}
                     </div>
-
-                    <div className="message-timestamp">
+                    <span className="message-timestamp">
                       {formatTime(msg.timestamp)}
-                    </div>
+                    </span>
                   </div>
                 </div>
               )}
@@ -106,11 +146,18 @@ export function ChatInterface({ customerId }) {
           ))
         )}
 
+        {/* Loading typing indicator */}
         {loading && (
-          <div className="message system">
-            <div className="message-bubble">
-              <span className="loading-spinner" />
-              Processing...
+          <div className="message-row agent">
+            <div className="message-content-wrapper">
+              <div className="typing-bubble">
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span className="typing-dot"></span>
+                <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '6px' }}>
+                  Evaluating policies & processing...
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -118,32 +165,47 @@ export function ChatInterface({ customerId }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="chat-input-container">
+      {/* Input Area */}
+      <div className="chat-input-area">
         {error && (
-          <div className="error-message">
-            {error}
+          <div className="auth-error-banner" style={{ marginBottom: '12px' }}>
+            <span>⚠️</span> {error}
           </div>
         )}
 
-        <div className="chat-input-wrapper">
+        <div className="chat-input-box">
           <textarea
-            className="chat-input"
-            placeholder="Describe your issue or request..."
+            ref={textareaRef}
+            className="chat-textarea"
+            placeholder="Type your question or request (e.g. Can you rebook my flight?)..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             disabled={loading || resuming}
-            rows="1"
-            style={{ minHeight: '40px' }}
+            rows={1}
           />
 
           <button
-            className="send-button"
-            onClick={handleSendMessage}
+            className="chat-send-btn"
+            onClick={() => handleSendMessage()}
             disabled={!inputValue.trim() || loading || resuming}
+            title="Send message"
           >
-            {loading ? 'Sending...' : 'Send'}
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M5 12h14M12 5l7 7-7 7"
+              />
+            </svg>
           </button>
         </div>
       </div>

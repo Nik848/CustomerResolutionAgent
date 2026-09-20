@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { supabase } from '../services/supabase'
 
+const TEST_ACCOUNTS = [
+  { label: 'Priya (Gold)', email: 'priya.nair@example.com', pass: 'Pass_123', tag: 'Cancelled' },
+  { label: 'Arvind (Silver)', email: 'arvind.kulkarni@example.com', pass: 'Pass_123', tag: '4h Delay' },
+  { label: 'Meher (Platinum)', email: 'meher.kaur@example.com', pass: 'Pass_123', tag: 'Fare Waiver' },
+  { label: 'Supervisor (Admin)', email: 'admin@airline.com', pass: 'Pass_123', tag: 'Admin Portal' }
+]
+
 export function Login({ onSwitchToSignUp }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -8,7 +15,7 @@ export function Login({ onSwitchToSignUp }) {
   const [error, setError] = useState(null)
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e?.preventDefault()
     setError(null)
 
     const trimmedEmail = email.trim()
@@ -25,14 +32,13 @@ export function Login({ onSwitchToSignUp }) {
       })
 
       if (signInError) {
-        // Map common Supabase Auth errors to human-friendly messages
         if (
           signInError.message?.toLowerCase().includes('invalid login credentials') ||
           signInError.message?.toLowerCase().includes('invalid credentials')
         ) {
-          setError('Invalid email or password. Please verify your credentials and try again.')
+          setError('Invalid email or password. Please check credentials.')
         } else if (signInError.message?.toLowerCase().includes('email not confirmed')) {
-          setError('Your email address has not been confirmed yet. Please check your inbox.')
+          setError('Email address has not been confirmed yet. Please verify.')
         } else {
           setError(signInError.message || 'Login failed. Please try again.')
         }
@@ -40,7 +46,6 @@ export function Login({ onSwitchToSignUp }) {
       }
 
       console.log('[Login] Sign in successful:', data?.user?.id)
-      // On successful login, onAuthStateChange in AuthContext will automatically update session
     } catch (err) {
       console.error('[Login] Unexpected error during sign in:', err)
       setError('An unexpected error occurred. Please try again.')
@@ -49,145 +54,93 @@ export function Login({ onSwitchToSignUp }) {
     }
   }
 
+  const fillCredentials = (acc) => {
+    setEmail(acc.email)
+    setPassword(acc.pass)
+    setError(null)
+  }
+
   return (
-    <div className="selection-screen">
-      <div className="selection-card" style={{ maxWidth: '440px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              width: '48px',
-              height: '48px',
-              background: '#eff6ff',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 12px',
-              fontSize: '24px',
-              color: '#1e40af'
-            }}
-          >
-            ✈
-          </div>
-          <h2>Welcome Back</h2>
-          <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Sign in to access your airline resolution dashboard
-          </p>
+    <div className="auth-wrapper">
+      <div className="auth-card">
+        {/* Brand Icon */}
+        <div className="auth-brand-badge">
+          <span>✈</span>
         </div>
 
+        <h2 className="auth-title">Welcome to SkyResolve</h2>
+        <p className="auth-subtitle">
+          Sign in to access your airline resolution portal
+        </p>
+
         {error && (
-          <div
-            className="error-message"
-            style={{
-              marginBottom: '20px',
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#991b1b',
-              fontSize: '13px'
-            }}
-          >
-            {error}
+          <div className="auth-error-banner">
+            <span>⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label
-              htmlFor="login-email"
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '6px'
-              }}
-            >
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-email">
               Email Address
             </label>
             <input
               id="login-email"
               type="email"
+              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder="e.g. priya.nair@example.com"
               disabled={loading}
               autoComplete="email"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              htmlFor="login-password"
-              style={{
-                display: 'block',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '6px'
-              }}
-            >
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-password">
               Password
             </label>
             <input
               id="login-password"
               type="password"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               disabled={loading}
               autoComplete="current-password"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: '6px',
-                border: '1px solid #d1d5db',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
             />
           </div>
 
           <button
             type="submit"
+            className="auth-submit-btn"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#1e40af',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'background-color 0.2s'
-            }}
           >
-            {loading ? 'Signing In...' : 'Sign In'}
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 
-        <div
-          style={{
-            marginTop: '24px',
-            textAlign: 'center',
-            fontSize: '13px',
-            color: '#6b7280'
-          }}
-        >
+        {/* Quick Fill Test Accounts */}
+        <div className="quick-fill-section">
+          <div className="quick-fill-title">Quick-fill Demo Accounts</div>
+          <div className="quick-fill-chips">
+            {TEST_ACCOUNTS.map((acc, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className="quick-fill-chip"
+                onClick={() => fillCredentials(acc)}
+                title={`Fill ${acc.email}`}
+              >
+                {acc.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
           Don't have an account?{' '}
           <button
             type="button"
@@ -195,14 +148,13 @@ export function Login({ onSwitchToSignUp }) {
             style={{
               background: 'none',
               border: 'none',
-              color: '#1e40af',
+              color: '#2563eb',
               fontWeight: '600',
               cursor: 'pointer',
-              padding: 0,
               textDecoration: 'underline'
             }}
           >
-            Sign up
+            Create an account
           </button>
         </div>
       </div>
