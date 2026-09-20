@@ -1,0 +1,59 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+venv.bak/
+env.bak/
+
+# Environment variables & sensitive configs
+.env
+.env.*
+!.env.example
+*.local
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+
+# Vector databases & local data caches
+chroma_db/
+chroma/
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Frontend / Node (if applicable)
+node_modules/
+dist/
+build/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Tooling & Agent metadata
+.kilo/
+.gemini/

@@ -1,0 +1,77 @@
+[
+  {
+    "policy_id": "CANCEL-001",
+    "category": "cancellation",
+    "title": "Airline-caused cancellation",
+    "content": "If a flight is cancelled by the airline, the customer is entitled to a free rebooking on the next available flight within 24 hours OR a full refund. The customer chooses.",
+    "allowed_actions": [
+      "rebook_within_24_hours",
+      "full_refund"
+    ],
+    "requires_human_approval": false
+  },
+  {
+    "policy_id": "DELAY-001",
+    "category": "delay",
+    "title": "Delay under 3 hours",
+    "content": "For a delay under 3 hours, the customer receives a ₹500 meal voucher.",
+    "allowed_actions": [
+      "meal_voucher"
+    ],
+    "requires_human_approval": false
+  },
+  {
+    "policy_id": "DELAY-002",
+    "category": "delay",
+    "title": "Delay more than 3 hours",
+    "content": "For a delay more than 3 hours, the customer receives a meal voucher and lounge access.",
+    "allowed_actions": [
+      "meal_voucher",
+      "lounge_access"
+    ],
+    "requires_human_approval": false
+  },
+  {
+    "policy_id": "DELAY-003",
+    "category": "delay",
+    "title": "Delay more than 5 hours",
+    "content": "For a delay more than 5 hours, the customer receives a meal voucher, lounge access and hotel accommodation covering only the delayed hours, not a full night.",
+    "allowed_actions": [
+      "meal_voucher",
+      "lounge_access",
+      "hotel_delayed_hours"
+    ],
+    "requires_human_approval": false
+  },
+  {
+    "policy_id": "REFUND-001",
+    "category": "refund",
+    "title": "Airline cancellation refund",
+    "content": "Refunds for airline-caused cancellations are processed in full within 7 business days and are issued to the original payment method only.",
+    "allowed_actions": [
+      "initiate_refund_original_payment_method"
+    ],
+    "requires_human_approval": false
+  },
+  {
+    "policy_id": "FARE-001",
+    "category": "fare_difference",
+    "title": "Higher-fare rebooking",
+    "content": "If a customer voluntarily chooses a higher-fare flight, the customer pays the fare difference. Agents cannot waive fare differences above ₹1,500 without supervisor approval.",
+    "allowed_actions": [
+      "collect_fare_difference"
+    ],
+    "requires_human_approval": true,
+    "approval_threshold": 1500
+  },
+  {
+    "policy_id": "LOYALTY-001",
+    "category": "loyalty",
+    "title": "Gold and Platinum priority",
+    "content": "Gold and Platinum customers receive priority rebooking with first access to next-available seats, but no additional compensation beyond standard policy.",
+    "allowed_actions": [
+      "priority_rebooking"
+    ],
+    "requires_human_approval": false
+  }
+]
